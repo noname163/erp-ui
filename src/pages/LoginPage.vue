@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { AppRoute, type RoleCode } from '@/types'
 
@@ -56,14 +58,12 @@ function homeForRole(role: RoleCode | null) {
         <div class="mb-10">
           <div class="flex items-center gap-3 mb-10">
             <div class="bg-slate-900 dark:bg-slate-800 p-2 rounded-lg">
-              <span class="material-symbols-outlined text-white text-3xl">corporate_fare</span>
+              <UiIcon name="corporate_fare" size="30px" class="text-white" />
             </div>
             <span class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">ERP Admin</span>
           </div>
 
-          <h1 class="text-[2.25rem] leading-[2.5rem] tracking-[-0.025em] font-bold text-slate-900 dark:text-white mb-3">
-            Welcome back
-          </h1>
+          <h1 class="text-h1 text-slate-900 dark:text-white mb-3">Welcome back</h1>
           <p class="text-base text-slate-500 dark:text-slate-400 leading-relaxed">
             Please enter your credentials to access your account.
           </p>
@@ -119,15 +119,8 @@ function homeForRole(role: RoleCode | null) {
 
           <div v-if="error" class="text-sm text-red-500">{{ error }}</div>
 
-          <UiButton
-            type="submit"
-            variant="primary"
-            block
-            :disabled="loading"
-            class="h-12 gap-2 uppercase tracking-wider font-semibold"
-          >
-            <span>{{ loading ? 'Signing in...' : 'Sign In' }}</span>
-            <span class="material-symbols-outlined text-[18px]">login</span>
+          <UiButton type="submit" variant="primary" block :disabled="loading" class="h-12" trailingIcon="login">
+            <span class="text-button">{{ loading ? 'Signing in...' : 'Sign In' }}</span>
           </UiButton>
         </form>
 
@@ -137,14 +130,8 @@ function homeForRole(role: RoleCode | null) {
               Restricted access. Role-based access control (RBAC) is active. Authorized users only.
             </p>
             <div class="flex items-center gap-4">
-              <span class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded">
-                <span class="material-symbols-outlined text-[14px] text-primary">security</span>
-                SSL Encrypted
-              </span>
-              <span class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded">
-                <span class="material-symbols-outlined text-[14px] text-primary">verified_user</span>
-                MFA Enabled
-              </span>
+              <UiBadge variant="info" icon="security">SSL Encrypted</UiBadge>
+              <UiBadge variant="info" icon="verified_user">MFA Enabled</UiBadge>
             </div>
           </div>
         </div>

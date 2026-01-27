@@ -2,6 +2,8 @@
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
+import UiBadge from '@/components/ui/UiBadge.vue'
 import { useRouter } from 'vue-router'
 import { AppRoute } from '@/types'
 
@@ -55,10 +57,16 @@ const leaveHeaders: UiTableHeader[] = [
   { key: 'actions', label: 'Actions', align: 'right' },
 ]
 
-function statusPillClass(status: LeaveStatus) {
-  if (status === 'APPROVED') return 'bg-green-100 text-green-700'
-  if (status === 'REJECTED') return 'bg-red-100 text-red-700'
-  return 'bg-amber-100 text-amber-700'
+function statusBadgeVariant(status: LeaveStatus) {
+  if (status === 'APPROVED') return 'success' as const
+  if (status === 'REJECTED') return 'error' as const
+  return 'warning' as const
+}
+
+function statusBadgeIcon(status: LeaveStatus) {
+  if (status === 'APPROVED') return 'check_circle'
+  if (status === 'REJECTED') return 'cancel'
+  return 'warning'
 }
 
 function exportReport() {
@@ -87,56 +95,56 @@ function exportReport() {
           <p class="text-slate-500">Welcome back, here's what's happening today.</p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <UiButton variant="outline" @click="exportReport">Export Report</UiButton>
-          <UiButton variant="primary" @click="router.push(AppRoute.CREATE_EMPLOYEE)">+ Add Employee</UiButton>
+          <UiButton variant="outline" leadingIcon="file_download" @click="exportReport">Export Report</UiButton>
+          <UiButton variant="primary" leadingIcon="add_circle" @click="router.push(AppRoute.CREATE_EMPLOYEE)">Add Employee</UiButton>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="flex justify-between items-start mb-4">
-            <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600">
-              <span class="material-symbols-outlined">groups</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600">
+                  <UiIcon name="groups" />
+                </div>
+                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Total Employees</p>
+              <h3 class="text-2xl font-bold mt-1">1,248</h3>
             </div>
-            <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
-          </div>
-          <p class="text-slate-500 text-sm font-medium">Total Employees</p>
-          <h3 class="text-2xl font-bold mt-1">1,248</h3>
-        </div>
 
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="flex justify-between items-start mb-4">
-            <div class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-600">
-              <span class="material-symbols-outlined">pending_actions</span>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-600">
+                  <UiIcon name="pending_actions" />
+                </div>
+                <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">8 New</span>
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Pending Leave</p>
+              <h3 class="text-2xl font-bold mt-1">12</h3>
             </div>
-            <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">8 New</span>
-          </div>
-          <p class="text-slate-500 text-sm font-medium">Pending Leave</p>
-          <h3 class="text-2xl font-bold mt-1">12</h3>
-        </div>
 
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="flex justify-between items-start mb-4">
-            <div class="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg text-green-600">
-              <span class="material-symbols-outlined">payments</span>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg text-green-600">
+                  <UiIcon name="payments" />
+                </div>
+                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">On track</span>
+              </div>
+              <p class="text-slate-500 text-sm font-medium">Active Payroll</p>
+              <h3 class="text-2xl font-bold mt-1">$450k</h3>
             </div>
-            <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">On track</span>
-          </div>
-          <p class="text-slate-500 text-sm font-medium">Active Payroll</p>
-          <h3 class="text-2xl font-bold mt-1">$450k</h3>
-        </div>
 
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="flex justify-between items-start mb-4">
-            <div class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600">
-              <span class="material-symbols-outlined">event_available</span>
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600">
+                  <UiIcon name="event_available" />
+                </div>
+                <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Today</span>
+              </div>
+              <p class="text-slate-500 text-sm font-medium">On Leave</p>
+              <h3 class="text-2xl font-bold mt-1">24</h3>
             </div>
-            <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Today</span>
           </div>
-          <p class="text-slate-500 text-sm font-medium">On Leave</p>
-          <h3 class="text-2xl font-bold mt-1">24</h3>
-        </div>
-      </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
@@ -210,18 +218,18 @@ function exportReport() {
             </template>
 
             <template #cell-status="{ row }">
-              <span class="px-2.5 py-1 rounded-full text-xs font-bold" :class="statusPillClass(row.status)">
+              <UiBadge :variant="statusBadgeVariant(row.status)" :icon="statusBadgeIcon(row.status)">
                 {{ row.status }}
-              </span>
+              </UiBadge>
             </template>
 
             <template #cell-actions>
               <div class="flex justify-end gap-2">
                 <button class="p-1 hover:text-green-600 transition-colors" title="Approve">
-                  <span class="material-symbols-outlined text-lg">check_circle</span>
+                  <UiIcon name="check_circle" size="18px" />
                 </button>
                 <button class="p-1 hover:text-red-600 transition-colors" title="Reject">
-                  <span class="material-symbols-outlined text-lg">cancel</span>
+                  <UiIcon name="cancel" size="18px" />
                 </button>
               </div>
             </template>
@@ -239,7 +247,7 @@ function exportReport() {
               <p class="font-bold">Salary Components</p>
               <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage payroll components</p>
             </div>
-            <span class="material-symbols-outlined text-slate-500">account_balance_wallet</span>
+            <UiIcon name="account_balance_wallet" class="text-slate-500" />
           </div>
         </button>
 
@@ -252,7 +260,7 @@ function exportReport() {
               <p class="font-bold">Salary Templates</p>
               <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Build salary templates</p>
             </div>
-            <span class="material-symbols-outlined text-slate-500">description</span>
+            <UiIcon name="description" class="text-slate-500" />
           </div>
         </button>
 
@@ -265,7 +273,7 @@ function exportReport() {
               <p class="font-bold">Employee Salaries</p>
               <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Create salary slips</p>
             </div>
-            <span class="material-symbols-outlined text-slate-500">payments</span>
+            <UiIcon name="payments" class="text-slate-500" />
           </div>
         </button>
       </div>

@@ -4,6 +4,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
 import { salaryService, type SalaryTemplateRequest, type SalaryTemplateDetailRequest } from '@/services/salary.service'
 
 const loading = ref(false)
@@ -119,7 +120,7 @@ async function submit() {
               </div>
               <div class="md:col-span-1 flex justify-end">
                 <button type="button" class="text-slate-500 hover:text-red-500" @click="removeDetail(i)">
-                  <span class="material-symbols-outlined">delete</span>
+                  <UiIcon name="delete" />
                 </button>
               </div>
               <div class="md:col-span-12">

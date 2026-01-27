@@ -5,6 +5,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
 import { employeeService, type CreateEmployeeRequest } from '@/services/employee.service'
 import { departmentService } from '@/services/department.service'
 import { AppRoute, type RoleCode } from '@/types'
@@ -117,7 +118,7 @@ onMounted(() => {
             <div class="flex items-center gap-2 mb-6">
                 <button class="text-slate-500 text-sm font-medium hover:text-primary"
                     @click="router.push(AppRoute.HR_OVERVIEW)">HR</button>
-                <span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+                <UiIcon name="chevron_right" size="16px" class="text-slate-400" />
                 <span class="text-slate-900 dark:text-white text-sm font-semibold">Create New Employee</span>
             </div>
 

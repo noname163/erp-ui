@@ -4,6 +4,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
 import { salaryService, type SalaryRequest } from '@/services/salary.service'
 
 type SalaryRow = SalaryRequest & { selected: boolean }
@@ -109,10 +110,10 @@ async function saveRow(r: SalaryRow) {
             </div>
             <div class="md:col-span-1 flex justify-end gap-2">
               <button type="button" class="text-slate-500 hover:text-primary" :disabled="loading" @click="saveRow(r)">
-                <span class="material-symbols-outlined">save</span>
+                <UiIcon name="save" />
               </button>
               <button type="button" class="text-slate-500 hover:text-red-500" :disabled="loading" @click="removeRow(i)">
-                <span class="material-symbols-outlined">delete</span>
+                <UiIcon name="delete" />
               </button>
             </div>
           </div>

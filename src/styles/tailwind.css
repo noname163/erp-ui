@@ -16,6 +16,10 @@
 
 /* Reusable component styles */
 @layer components {
+  .text-h1 { @apply text-[2.25rem] leading-[2.5rem] tracking-[-0.025em] font-bold; }
+  .text-body-medium { @apply text-sm leading-6 tracking-[0.01em] font-medium; }
+  .text-button { @apply text-sm leading-5 tracking-[0.025em] font-semibold uppercase; }
+
   .ui-card {
     @apply bg-white dark:bg-slate-900 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-primary/10 overflow-hidden;
   }
@@ -26,6 +30,7 @@
   }
   .ui-btn-primary { @apply ui-btn bg-primary text-white hover:bg-primary/90; }
   .ui-btn-outline { @apply ui-btn bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-primary/20 hover:border-primary/50; }
+  .ui-btn-icon { @apply rounded-lg h-10 w-10 p-0; }
 
   .ui-label { @apply text-[#0d121b] dark:text-slate-200 text-sm font-medium pb-1.5; }
   .ui-input {
@@ -37,4 +42,10 @@
   .ui-textarea {
     @apply form-textarea flex w-full rounded-lg text-[#0d121b] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-primary/20 bg-white dark:bg-slate-800 focus:border-primary p-4 text-sm font-normal;
   }
+
+  .ui-badge { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold; }
+  .ui-badge-success { @apply ui-badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400; }
+  .ui-badge-warning { @apply ui-badge bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400; }
+  .ui-badge-error { @apply ui-badge bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400; }
+  .ui-badge-info { @apply ui-badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400; }
 }
