@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { companyService } from '@/services/company.service'
 import type { Company } from '@/types'
 import { AppRoute } from '@/types'
@@ -29,6 +30,14 @@ async function load() {
 onMounted(load)
 
 const empty = computed(() => !loading.value && rows.value.length === 0)
+
+const headers: UiTableHeader[] = [
+  { key: 'code', label: 'Code' },
+  { key: 'name', label: 'Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'industry', label: 'Industry' },
+  { key: 'phoneNumber', label: 'Phone' },
+]
 </script>
 
 <template>
@@ -54,27 +63,21 @@ const empty = computed(() => !loading.value && rows.value.length === 0)
           </div>
         </div>
 
-        <div v-else class="overflow-auto">
-          <table class="min-w-full text-sm">
-            <thead class="text-left text-slate-500">
-              <tr class="border-b border-primary/10">
-                <th class="py-3 pr-4">Code</th>
-                <th class="py-3 pr-4">Name</th>
-                <th class="py-3 pr-4">Email</th>
-                <th class="py-3 pr-4">Industry</th>
-                <th class="py-3 pr-4">Phone</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="c in rows" :key="c.code" class="border-b border-primary/10">
-                <td class="py-3 pr-4 font-medium">{{ c.code }}</td>
-                <td class="py-3 pr-4">{{ c.name }}</td>
-                <td class="py-3 pr-4">{{ c.email }}</td>
-                <td class="py-3 pr-4">{{ c.industry }}</td>
-                <td class="py-3 pr-4">{{ c.phoneNumber }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else>
+          <UiTable
+            :headers="headers"
+            :rows="rows"
+            row-key="code"
+            head-class="bg-transparent"
+            head-row-class="border-b border-primary/10"
+            body-class="divide-primary/10 dark:divide-primary/10"
+            th-base-class="py-3 pr-4 text-left text-slate-500 text-xs font-bold uppercase tracking-wider"
+            td-base-class="py-3 pr-4"
+          >
+            <template #cell-code="{ row }">
+              <span class="font-medium">{{ row.code }}</span>
+            </template>
+          </UiTable>
         </div>
       </div>
     </div>
