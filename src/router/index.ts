@@ -14,11 +14,18 @@ import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
 import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue";
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
+import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: AppRoute.LOGIN, component: LoginPage, meta: { public: true } },
+
+    {
+      path: AppRoute.RESET_PASSWORD,
+      component: ResetPasswordPage,
+      meta: { auth: true },
+    },
 
     {
       path: AppRoute.DASHBOARD,

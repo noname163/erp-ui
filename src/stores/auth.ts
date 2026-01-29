@@ -50,7 +50,6 @@ export const useAuthStore = defineStore("auth", {
     },
     async login(email: string, password: string) {
       const data = await authService.login({ email, password });
-
       const roles = extractRoles(data);
       this.roles = roles;
 
@@ -68,6 +67,8 @@ export const useAuthStore = defineStore("auth", {
       const nextRole =
         existing && roles.includes(existing) ? existing : (roles[0] ?? null);
       if (nextRole) this.setRole(data.role);
+
+      return { firstLogin: !!data?.data?.firstLogin };
     },
     setRole(role: RoleCode) {
       this.activeRole = role;
