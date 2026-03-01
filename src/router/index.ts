@@ -14,6 +14,7 @@ import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
 import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue";
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
+import EmployeeListPage from "@/pages/EmployeeListPage.vue";
 import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
 
 const router = createRouter({
@@ -75,6 +76,20 @@ const router = createRouter({
       component: HRDashboardPage,
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
+    {
+      path: AppRoute.EMPLOYEES,
+      component: EmployeeListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
+        ] satisfies RoleCode[],
+      },
+    },
+
     {
       path: AppRoute.CREATE_EMPLOYEE,
       component: CreateEmployeePage,

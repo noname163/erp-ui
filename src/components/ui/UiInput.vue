@@ -10,9 +10,14 @@ type Props = {
   disabled?: boolean
   name?: string
   autocomplete?: string
+  step?: string | number
+  min?: string | number
+  max?: string | number
   hint?: string
   error?: string
+  leadingIcon?: string
   trailingIcon?: string
+  trailingActive?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -20,6 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
   required: false,
   disabled: false,
+  trailingActive: false,
 })
 
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'trailing-click'): void }>()
@@ -37,6 +43,12 @@ const value = computed({
       </p>
 
       <div class="relative">
+        <span
+          v-if="leadingIcon"
+          class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4c669a] dark:text-slate-400"
+        >
+          {{ leadingIcon }}
+        </span>
         <input
           v-model="value"
           :type="type"
@@ -45,13 +57,20 @@ const value = computed({
           :disabled="disabled"
           :name="name"
           :autocomplete="autocomplete"
+          :step="step"
+          :min="min"
+          :max="max"
           class="ui-input pr-12"
-          :class="error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : ''"
+          :class="[
+            leadingIcon ? 'pl-10' : '',
+            error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : '',
+          ]"
         />
         <button
           v-if="trailingIcon"
           type="button"
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary p-1"
+          class="absolute right-2 top-1/2 -translate-y-1/2 hover:text-primary p-1"
+          :class="trailingActive ? 'text-primary' : 'text-slate-500'"
           @click="$emit('trailing-click')"
         >
           <span class="material-symbols-outlined">{{ trailingIcon }}</span>

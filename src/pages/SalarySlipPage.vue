@@ -20,9 +20,9 @@ const today = new Date().toISOString().slice(0, 10)
 const LS_DRAFT = 'erp.salarySlip.draft'
 
 const employeeOptions = [
-    { value: 'USR-000001', label: 'John Doe - USR-000001' },
-    { value: 'USR-000002', label: 'Jane Smith - USR-000002' },
-    { value: 'USR-000003', label: 'Michael Scott - USR-000003' },
+    { value: 'USR-000001', label: 'John Doe' },
+    { value: 'USR-000002', label: 'Jane Smith' },
+    { value: 'USR-000003', label: 'Michael Scott' },
 ]
 
 const currencyOptions = [

@@ -46,13 +46,13 @@
 
   .ui-label { @apply text-[#0d121b] dark:text-slate-200 text-sm font-medium pb-1.5; }
   .ui-input {
-    @apply form-input flex w-full rounded-lg text-[#0d121b] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-primary/20 bg-white dark:bg-slate-800 focus:border-primary h-12 p-4 text-sm font-normal;
+    @apply form-input flex w-full rounded-lg bg-[#f8f9fc] dark:bg-slate-900 border border-[#cfd7e7] dark:border-slate-800 px-4 py-3 text-sm font-normal text-[#0d121b] dark:text-white outline-none transition-all focus:border-2 focus:border-primary focus:ring-4 focus:ring-primary/10;
   }
   .ui-select {
-    @apply form-select flex w-full rounded-lg text-[#0d121b] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-primary/20 bg-white dark:bg-slate-800 focus:border-primary h-12 px-4 text-sm font-normal;
+    @apply form-select flex w-full rounded-lg bg-[#f8f9fc] dark:bg-slate-900 border border-[#cfd7e7] dark:border-slate-800 px-4 py-3 text-sm font-normal text-[#0d121b] dark:text-white outline-none transition-all focus:border-2 focus:border-primary focus:ring-4 focus:ring-primary/10;
   }
   .ui-textarea {
-    @apply form-textarea flex w-full rounded-lg text-[#0d121b] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-primary/20 bg-white dark:bg-slate-800 focus:border-primary p-4 text-sm font-normal;
+    @apply form-textarea flex w-full rounded-lg bg-[#f8f9fc] dark:bg-slate-900 border border-[#cfd7e7] dark:border-slate-800 px-4 py-3 text-sm font-normal text-[#0d121b] dark:text-white outline-none transition-all focus:border-2 focus:border-primary focus:ring-4 focus:ring-primary/10;
   }
 
   .ui-badge { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold; }

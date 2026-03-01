@@ -5,6 +5,7 @@ export enum AppRoute {
   COMPANIES = "/companies",
   CREATE_COMPANY = "/companies/new",
   DEPARTMENTS = "/departments",
+  EMPLOYEES = "/employees",
   CREATE_EMPLOYEE = "/employees/new",
   HR_OVERVIEW = "/hr",
   PAYROLL_BUILDER = "/payroll/builder",

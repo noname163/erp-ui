@@ -8,12 +8,14 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { employeeService, type CreateEmployeeRequest } from '@/services/employee.service'
 import { departmentService } from '@/services/department.service'
-import { AppRoute, type RoleCode } from '@/types'
+import { roleService } from '@/services/role.service'
+import { AppRoute } from '@/types'
 
 const router = useRouter()
 
 const loading = ref(false)
 const loadingDepartments = ref(false)
+const loadingRoles = ref(false)
 const error = ref('')
 const success = ref('')
 
@@ -29,15 +31,11 @@ const form = ref<CreateEmployeeRequest>({
 
 const fieldErrors = ref<Partial<Record<keyof CreateEmployeeRequest, string>>>({})
 
-const roleOptions = [
-    { value: 'EMPLOYEE', label: 'Employee' },
-    { value: 'HUMAN_RESOURCES', label: 'Human Resource' },
-    { value: 'COMPANY_MANAGER', label: 'Company Manager' },
-] satisfies { value: RoleCode; label: string }[]
+const roleOptions = ref<{ value: string; label: string }[]>([])
 
 const departmentOptions = ref<{ value: string; label: string }[]>([])
 
-const canSubmit = computed(() => !loading.value && !loadingDepartments.value)
+const canSubmit = computed(() => !loading.value && !loadingDepartments.value && !loadingRoles.value)
 
 function validate() {
     const nextErrors: Partial<Record<keyof CreateEmployeeRequest, string>> = {}
@@ -57,8 +55,8 @@ function validate() {
 async function loadDepartments() {
     loadingDepartments.value = true
     try {
-        const res = await departmentService.list({ page: 0, size: 200 })
-        const items = (res?.content ?? res?.data ?? []) as Array<{ code?: string; name?: string }>
+        const res = await departmentService.options()
+        const items = (res ?? []) as Array<{ code?: string; name?: string }>
         departmentOptions.value = items
             .filter((d) => d?.code && d?.name)
             .map((d) => ({ value: d.code as string, label: d.name as string }))
@@ -66,6 +64,25 @@ async function loadDepartments() {
         error.value = e?.response?.data?.message ?? 'Load departments failed'
     } finally {
         loadingDepartments.value = false
+    }
+}
+
+async function loadRoles() {
+    loadingRoles.value = true
+    try {
+        const res = await roleService.options()
+        const items = (res ?? []) as Array<{ code?: string; name?: string }>
+        roleOptions.value = items
+            .filter((r) => r?.code && r?.name)
+            .map((r) => ({ value: r.code as string, label: r.name as string }))
+
+        if (!roleOptions.value.some((r) => r.value === form.value.roleCode)) {
+            form.value.roleCode = roleOptions.value[0]?.value ?? ''
+        }
+    } catch (e: any) {
+        error.value = e?.response?.data?.message ?? 'Load roles failed'
+    } finally {
+        loadingRoles.value = false
     }
 }
 
@@ -99,7 +116,7 @@ async function submit() {
             phone: form.value.phone.trim(),
         })
         success.value = 'Employee created'
-        router.push(AppRoute.HR_OVERVIEW)
+        router.push(AppRoute.EMPLOYEES)
     } catch (e: any) {
         error.value = e?.response?.data?.message ?? 'Create employee failed'
     } finally {
@@ -109,6 +126,7 @@ async function submit() {
 
 onMounted(() => {
     loadDepartments()
+    loadRoles()
 })
 </script>
 
@@ -117,7 +135,7 @@ onMounted(() => {
         <div class="w-full max-w-5xl mx-auto">
             <div class="flex items-center gap-2 mb-6">
                 <button class="text-slate-500 text-sm font-medium hover:text-primary"
-                    @click="router.push(AppRoute.HR_OVERVIEW)">HR</button>
+                    @click="router.push(AppRoute.EMPLOYEES)">Employees</button>
                 <UiIcon name="chevron_right" size="16px" class="text-slate-400" />
                 <span class="text-slate-900 dark:text-white text-sm font-semibold">Create New Employee</span>
             </div>
@@ -128,7 +146,7 @@ onMounted(() => {
                     <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">POST /api/employees</p>
                 </div>
                 <div class="flex gap-3">
-                    <UiButton variant="outline" :disabled="loading" @click="router.push(AppRoute.HR_OVERVIEW)">Cancel
+                    <UiButton variant="outline" :disabled="loading" @click="router.push(AppRoute.EMPLOYEES)">Cancel
                     </UiButton>
                     <UiButton variant="primary" :disabled="!canSubmit" @click="submit">
                         <span v-if="loading">Saving...</span>
@@ -193,7 +211,7 @@ onMounted(() => {
                                 placeholder="Select Department" :options="departmentOptions"
                                 :disabled="loadingDepartments" :error="fieldErrors.departmentCode" />
                             <UiSelect v-model="form.roleCode" label="Role" required placeholder="Select Role"
-                                :options="roleOptions" :error="fieldErrors.roleCode" />
+                                :options="roleOptions" :disabled="loadingRoles" :error="fieldErrors.roleCode" />
                         </div>
                     </section>
 

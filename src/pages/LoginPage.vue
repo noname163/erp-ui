@@ -40,6 +40,7 @@ async function submit() {
             router.push(AppRoute.RESET_PASSWORD)
             return
         }
+        console.log('Active role:', auth.activeRole)
         router.push(homeForRole(auth.activeRole))
     } catch (e: any) {
         error.value = e?.response?.data?.message ?? 'Login failed'
