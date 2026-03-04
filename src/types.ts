@@ -8,6 +8,7 @@ export enum AppRoute {
   EMPLOYEES = "/employees",
   CREATE_EMPLOYEE = "/employees/new",
   HR_OVERVIEW = "/hr",
+  PAYROLL_TEMPLATES = "/payroll/templates",
   PAYROLL_BUILDER = "/payroll/builder",
   PAYROLL_COMPONENTS = "/payroll/components",
   SALARY_SLIP = "/salary/slip",
