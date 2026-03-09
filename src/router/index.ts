@@ -12,6 +12,7 @@ import SalarySlipPage from "@/pages/SalarySlipPage.vue";
 import LogWorkPage from "@/pages/LogWorkPage.vue";
 import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
+import SalaryTemplateListPage from "@/pages/SalaryTemplateListPage.vue";
 import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue";
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
 import EmployeeListPage from "@/pages/EmployeeListPage.vue";
@@ -102,6 +103,11 @@ const router = createRouter({
     {
       path: AppRoute.PAYROLL_COMPONENTS,
       component: SalaryComponentsBuilderPage,
+      meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+      path: AppRoute.PAYROLL_TEMPLATES,
+      component: SalaryTemplateListPage,
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
