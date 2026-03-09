@@ -52,6 +52,10 @@ export type SalaryTemplateListQuery = {
 };
 
 export const salaryService = {
+  async listComponents(params?: Record<string, any>) {
+    const { data } = await http.get("/api/salaries", { params });
+    return data;
+  },
   async createComponents(req: SalaryRequest[]) {
     const { data } = await http.post("/api/salaries", req);
     return data;

@@ -134,7 +134,7 @@ onMounted(loadOptions)
       </div>
     </div>
 
-    <div class="ui-card">
+    <div class="ui-card overflow-visible">
       <div class="p-4 md:p-6 space-y-6">
         <div v-if="error" class="text-sm text-red-500">{{ error }}</div>
         <div v-if="message" class="text-sm text-green-600">{{ message }}</div>
