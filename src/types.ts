@@ -12,6 +12,7 @@ export enum AppRoute {
   PAYROLL_BUILDER = "/payroll/builder",
   PAYROLL_COMPONENTS = "/payroll/components",
   SALARY_SLIP = "/salary/slip",
+  SALARY_SLIP_LIST = "/salary/slips",
   LOG_WORK = "/timesheets/log",
   BULK_LOG_WORK = "/timesheets/bulk-log",
 }
