@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIcon from '@/components/ui/UiIcon.vue'
 import { companyService } from '@/services/company.service'
 import { AppRoute } from '@/types'
 
@@ -42,7 +43,7 @@ async function submit() {
     <div class="w-full max-w-4xl mx-auto">
       <div class="flex items-center gap-2 mb-6">
         <button class="text-slate-500 text-sm font-medium hover:text-primary" @click="router.push(AppRoute.COMPANIES)">Organizations</button>
-        <span class="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
+        <UiIcon name="chevron_right" size="16px" class="text-slate-400" />
         <span class="text-slate-900 dark:text-white text-sm font-semibold">Create New Company</span>
       </div>
 

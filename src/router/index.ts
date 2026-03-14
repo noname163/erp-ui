@@ -12,13 +12,22 @@ import SalarySlipPage from "@/pages/SalarySlipPage.vue";
 import LogWorkPage from "@/pages/LogWorkPage.vue";
 import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
+import SalaryTemplateListPage from "@/pages/SalaryTemplateListPage.vue";
 import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue";
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
+import EmployeeListPage from "@/pages/EmployeeListPage.vue";
+import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: AppRoute.LOGIN, component: LoginPage, meta: { public: true } },
+
+    {
+      path: AppRoute.RESET_PASSWORD,
+      component: ResetPasswordPage,
+      meta: { auth: true },
+    },
 
     {
       path: AppRoute.DASHBOARD,
@@ -69,6 +78,20 @@ const router = createRouter({
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
+      path: AppRoute.EMPLOYEES,
+      component: EmployeeListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
+        ] satisfies RoleCode[],
+      },
+    },
+
+    {
       path: AppRoute.CREATE_EMPLOYEE,
       component: CreateEmployeePage,
       meta: {
@@ -80,6 +103,11 @@ const router = createRouter({
     {
       path: AppRoute.PAYROLL_COMPONENTS,
       component: SalaryComponentsBuilderPage,
+      meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+      path: AppRoute.PAYROLL_TEMPLATES,
+      component: SalaryTemplateListPage,
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
