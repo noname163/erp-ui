@@ -19,12 +19,12 @@ export type EmployeeListQuery = {
 
 export const employeeService = {
   async list(params?: EmployeeListQuery) {
-    const { data } = await http.get('/api/employees', { params })
+    const { data } = await http.get('/api/v1/employees', { params })
     return data
   },
 
   async create(req: CreateEmployeeRequest) {
-    const { data } = await http.post('/api/employees', req)
+    const { data } = await http.post('/api/v1/employees', req)
     return data
   },
 }

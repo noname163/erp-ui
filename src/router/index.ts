@@ -17,6 +17,7 @@ import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
 import EmployeeListPage from "@/pages/EmployeeListPage.vue";
 import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
+import SalarySlipListPage from "@/pages/SalarySlipListPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -127,7 +128,18 @@ const router = createRouter({
         ] satisfies RoleCode[],
       },
     },
-
+    {
+      path: AppRoute.SALARY_SLIP_LIST,
+      component: SalarySlipListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "HUMAN_RESOURCES",
+          "COMPANY_MANAGER",
+          "EMPLOYEE",
+        ] satisfies RoleCode[],
+      },
+    },
     {
       path: AppRoute.LOG_WORK,
       component: LogWorkPage,
