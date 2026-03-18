@@ -9,6 +9,7 @@ import CreateCompanyPage from "@/pages/CreateCompanyPage.vue";
 import DepartmentManagementPage from "@/pages/DepartmentManagementPage.vue";
 import HRDashboardPage from "@/pages/HRDashboardPage.vue";
 import SalarySlipPage from "@/pages/SalarySlipPage.vue";
+import LogWorkListPage from "@/pages/LogWorkListPage.vue";
 import LogWorkPage from "@/pages/LogWorkPage.vue";
 import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
@@ -141,6 +142,14 @@ const router = createRouter({
       },
     },
     {
+      path: AppRoute.LOG_WORK_LIST,
+      component: LogWorkListPage,
+      meta: {
+        auth: true,
+        roles: ["EMPLOYEE", "HUMAN_RESOURCES"] satisfies RoleCode[],
+      },
+    },
+    {
       path: AppRoute.LOG_WORK,
       component: LogWorkPage,
       meta: {
@@ -179,6 +188,6 @@ export default router;
 
 function homeForRole(role: RoleCode) {
   if (role === "HUMAN_RESOURCES") return AppRoute.HR_OVERVIEW;
-  if (role === "EMPLOYEE") return AppRoute.LOG_WORK;
+  if (role === "EMPLOYEE") return AppRoute.LOG_WORK_LIST;
   return AppRoute.DASHBOARD;
 }

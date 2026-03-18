@@ -1,23 +1,30 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 import UiCheckbox from '@/components/ui/UiCheckbox.vue'
-import UiSearchSelect from '@/components/ui/UiSearchSelect.vue'
+import UiSearchSelect, { type UiSearchSelectOption } from '@/components/ui/UiSearchSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { dailyWorkService, type DailyWorkUnit, type WorkType } from '@/services/daily-work.service'
+import { userProfileService } from '@/services/user-profile.service'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 
 const loading = ref(false)
+const loadingEmployees = ref(false)
 const error = ref('')
 const message = ref('')
+const selectedWorkCode = computed(() => {
+  const code = route.query.code
+  return typeof code === 'string' ? code : ''
+})
 
 const defaultForm = () => ({
   userProfileCode: '',
@@ -34,17 +41,7 @@ const defaultForm = () => ({
 
 const form = ref(defaultForm())
 
-const employeeOptions = [
-  {
-    value: 'EMP-001',
-    label: 'John Doe',
-    subtitle: 'Senior Software Engineer',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCWJWqEACDCp7b4ZK1Z8D2DF3NZn1QBd5WlCrOjlj2ziGRcMEVx-F3EgdMtd9oufp0EQ9pfpb_8UHEqgjs27NEx2xSz7J8wuJ0-F87vuyCcpukfsBKF1qJ7rr1aURquQM06RNIqMMYaJnlyr6hsXerFgRKTyBJw-lsrFKR5EpzGyYILr2VuGiQERrP5eqcfffGJIv_OmNzRkCZPoI11xx3Cd5f1EjjqA7mzqlqOr-rRINaL4bUqB_9evxLuHknia9mD9G2xoor7VrVo',
-  },
-  { value: 'EMP-042', label: 'John Smith', subtitle: 'Project Manager' },
-  { value: 'EMP-089', label: 'Johnathan Johnson', subtitle: 'QA Specialist' },
-]
+const employeeOptions = ref<UiSearchSelectOption[]>([])
 
 const unitOptions = [
   { value: 'HOUR', label: 'HOUR' },
@@ -61,6 +58,34 @@ const workTypeOptions = [
 ]
 
 const canSubmit = computed(() => !loading.value)
+
+function normalizeUserOptions(res: any): UiSearchSelectOption[] {
+  const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item: any) => {
+      const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
+      const label = String(item?.name ?? item?.fullName ?? item?.email ?? value).trim()
+      const subtitle = String(item?.positionName ?? item?.jobTitle ?? item?.departmentName ?? '').trim()
+      if (!value) return null
+      const option: UiSearchSelectOption = { value, label }
+      if (subtitle) option.subtitle = subtitle
+      return option
+    })
+    .filter((item: UiSearchSelectOption | null): item is UiSearchSelectOption => Boolean(item))
+}
+
+async function loadEmployeeOptions() {
+  loadingEmployees.value = true
+  try {
+    const res = await userProfileService.options({ page: 0, size: 200, sortDir: 'ASC' })
+    employeeOptions.value = normalizeUserOptions(res)
+  } catch (e: any) {
+    error.value = e?.response?.data?.message ?? 'Failed to load employees'
+  } finally {
+    loadingEmployees.value = false
+  }
+}
 
 function cancel() {
   form.value = defaultForm()
@@ -87,6 +112,10 @@ async function submit() {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  loadEmployeeOptions()
+})
 </script>
 
 <template>
@@ -97,7 +126,7 @@ async function submit() {
           Dashboard
         </button>
         <UiIcon name="chevron_right" size="16" class="text-slate-300" />
-        <button class="text-slate-500 dark:text-slate-400 hover:text-primary" @click="router.push(AppRoute.LOG_WORK)">
+        <button class="text-slate-500 dark:text-slate-400 hover:text-primary" @click="router.push(AppRoute.LOG_WORK_LIST)">
           Timesheets
         </button>
         <UiIcon name="chevron_right" size="16" class="text-slate-300" />
@@ -111,6 +140,9 @@ async function submit() {
 
       <UiCard class="!overflow-visible relative shadow-sm border border-slate-200 dark:border-slate-800">
         <div class="p-6 md:p-8 space-y-8">
+          <div v-if="selectedWorkCode" class="text-sm text-primary">
+            Working log code: {{ selectedWorkCode }}
+          </div>
           <div v-if="error" class="text-sm text-rose-600">{{ error }}</div>
           <div v-if="message" class="text-sm text-green-600">{{ message }}</div>
 
@@ -122,6 +154,7 @@ async function submit() {
               sectionIcon="badge"
               label="Select Employee"
               placeholder="Search by name or ID..."
+              :disabled="loadingEmployees"
               required
             />
 

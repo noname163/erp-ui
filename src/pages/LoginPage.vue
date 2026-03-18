@@ -51,7 +51,7 @@ async function submit() {
 
 function homeForRole(role: RoleCode | null) {
     if (role === 'HUMAN_RESOURCES') return AppRoute.HR_OVERVIEW
-    if (role === 'EMPLOYEE') return AppRoute.LOG_WORK
+    if (role === 'EMPLOYEE') return AppRoute.LOG_WORK_LIST
     if (role === 'ADMIN') return AppRoute.DASHBOARD
     return AppRoute.DASHBOARD
 }
