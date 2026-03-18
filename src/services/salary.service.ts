@@ -11,6 +11,7 @@ export type SalaryTemplateDetailRequest = {
   quantity: string;
   unitCode: string;
   sequenceOrder: string;
+  dependencyCode?: string;
 };
 export type SalaryTemplateRequest = {
   name: string;
@@ -57,6 +58,7 @@ export type SalaryTemplateDetailResponse = {
   quantity?: string;
   unitCode?: string;
   sequenceOrder?: string;
+  dependencyCode?: string;
 };
 
 export const salaryService = {

@@ -20,6 +20,10 @@ type SalaryTemplateForm = Omit<SalaryTemplateRequest, 'details' | 'description' 
   currency: string
 }
 
+type SalaryTemplateDetailRow = Omit<SalaryTemplateDetailRequest, 'dependencyCode'> & {
+  dependencyCode: string
+}
+
 const template = ref<SalaryTemplateForm>({
   name: 'Default Template',
   description: 'Monthly payroll template',
@@ -31,10 +35,14 @@ const template = ref<SalaryTemplateForm>({
 
 const salaryCodeOptions = ref<{ value: string; label: string }[]>([])
 const unitOptions = ref<{ value: string; label: string }[]>([])
+const dependencySalaryOptions = computed(() => [
+  { value: '', label: 'No dependency' },
+  ...salaryCodeOptions.value,
+])
 
-const details = ref<SalaryTemplateDetailRequest[]>([
-  { salaryCode: 'BASE', amount: '15000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '1' },
-  { salaryCode: 'ALLOWANCE', amount: '3000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '2' },
+const details = ref<SalaryTemplateDetailRow[]>([
+  { salaryCode: 'BASE', amount: '15000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '1', dependencyCode: '' },
+  { salaryCode: 'ALLOWANCE', amount: '3000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '2', dependencyCode: '' },
 ])
 
 function parseAmount(value: string) {
@@ -56,6 +64,7 @@ function addDetail() {
     quantity: '1',
     unitCode: unitOptions.value[0]?.value ?? '',
     sequenceOrder: String(details.value.length + 1),
+    dependencyCode: '',
   })
 }
 
@@ -110,6 +119,10 @@ async function loadOptions() {
       ...d,
       salaryCode: salaryCodeOptions.value.some((x) => x.value === d.salaryCode) ? d.salaryCode : firstSalaryCode,
       unitCode: unitOptions.value.some((x) => x.value === d.unitCode) ? d.unitCode : firstUnit,
+      dependencyCode:
+        d.dependencyCode && salaryCodeOptions.value.some((x) => x.value === d.dependencyCode)
+          ? d.dependencyCode
+          : '',
     }))
   } catch (e: any) {
     error.value = e?.response?.data?.message ?? 'Failed to load salary/unit options'
@@ -159,6 +172,9 @@ onMounted(loadOptions)
                 <UiSelect v-model="d.salaryCode" label="Salary Code" :options="salaryCodeOptions" :disabled="loadingOptions" required />
               </div>
               <div class="md:col-span-3">
+                <UiSelect v-model="d.dependencyCode" label="Dependency Salary" :options="dependencySalaryOptions" :disabled="loadingOptions" />
+              </div>
+              <div class="md:col-span-2">
                 <UiInput v-model="d.amount" label="Amount" required />
               </div>
               <div class="md:col-span-1">

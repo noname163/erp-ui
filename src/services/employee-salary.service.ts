@@ -21,6 +21,7 @@ export type EmployeeSalarySlipRequest = EmployeeSalaryRequest & {
 export type EmployeeSalarySlipDetailRequest = {
   salaryCode: string
   amount: string
+  dependencyCode?: string
 }
 
 export type EmployeeSalaryListQuery = {

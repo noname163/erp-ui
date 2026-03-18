@@ -39,6 +39,10 @@ const employeeOptions = ref<SelectOption[]>([])
 const salaryTemplateOptions = ref<SelectOption[]>([])
 const salaryCodeOptions = ref<SelectOption[]>([])
 const selectedSalaryTemplateCode = ref('')
+const dependencySalaryOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'No dependency' },
+    ...salaryCodeOptions.value,
+])
 
 const master = ref({
     userProfileCode: '',
@@ -92,9 +96,21 @@ function sumDecimalStrings(values: string[]) {
     return formatScaledBigInt(total, maxScale)
 }
 
-type SalaryDetailRow = EmployeeSalarySlipDetailRequest & { remark: string }
+type SalaryDetailRow = Omit<EmployeeSalarySlipDetailRequest, 'dependencyCode'> & {
+    dependencyCode: string
+    remark: string
+}
 
 const details = ref<SalaryDetailRow[]>([])
+
+function createEmptyDetail(): SalaryDetailRow {
+    return {
+        salaryCode: salaryCodeOptions.value[0]?.value ?? '',
+        amount: '0',
+        dependencyCode: '',
+        remark: '',
+    }
+}
 
 const totalAmount = computed(() => sumDecimalStrings(details.value.map(d => d.amount)))
 
@@ -104,6 +120,7 @@ const compiledPayload = computed<EmployeeSalarySlipRequest>(() => ({
     salaryDetails: details.value.map(d => ({
         salaryCode: d.salaryCode,
         amount: d.amount,
+        dependencyCode: d.dependencyCode?.trim() || undefined,
     })),
 }))
 
@@ -139,7 +156,7 @@ async function createSlip() {
 }
 
 function addDetail() {
-    details.value.push({ salaryCode: salaryCodeOptions.value[0]?.value ?? '', amount: '0', remark: '' })
+    details.value.push(createEmptyDetail())
 }
 
 function removeDetail(i: number) {
@@ -174,12 +191,13 @@ function normalizeTemplateDetails(res: any): SalaryDetailRow[] {
     const raw = (res?.content ?? res?.data ?? res?.details ?? res ?? []) as any[]
     if (!Array.isArray(raw)) return []
     return raw
-        .map((item: any) => {
+        .map((item: any): SalaryDetailRow | null => {
             const salaryCode = String(item?.salaryCode ?? item?.code ?? '').trim()
             if (!salaryCode) return null
             return {
                 salaryCode,
                 amount: String(item?.amount ?? '0'),
+                dependencyCode: String(item?.dependencyCode ?? '').trim(),
                 remark: String(item?.remark ?? item?.description ?? ''),
             }
         })
@@ -221,7 +239,7 @@ async function onTemplateChange(code: string) {
     try {
         const res = await salaryService.templateDetails(code)
         const templateDetails = normalizeTemplateDetails(res)
-        details.value = templateDetails.length > 0 ? templateDetails : [{ salaryCode: salaryCodeOptions.value[0]?.value ?? '', amount: '0', remark: '' }]
+        details.value = templateDetails.length > 0 ? templateDetails : [createEmptyDetail()]
     } catch (e: any) {
         error.value = e?.response?.data?.message ?? 'Failed to load template details'
     } finally {
@@ -237,7 +255,7 @@ function resetForm() {
         currency: 'USD',
     }
     selectedSalaryTemplateCode.value = ''
-    details.value = [{ salaryCode: salaryCodeOptions.value[0]?.value ?? '', amount: '0', remark: '' }]
+    details.value = [createEmptyDetail()]
     error.value = ''
     message.value = ''
 }
@@ -263,7 +281,13 @@ async function loadDraft() {
     try {
         const parsed = JSON.parse(raw) as { master?: typeof master.value; details?: SalaryDetailRow[]; selectedSalaryTemplateCode?: string }
         if (parsed.master) master.value = parsed.master
-        if (Array.isArray(parsed.details)) details.value = parsed.details
+        if (Array.isArray(parsed.details)) {
+            details.value = parsed.details.map((detail) => ({
+                ...createEmptyDetail(),
+                ...detail,
+                dependencyCode: String(detail?.dependencyCode ?? '').trim(),
+            }))
+        }
         if (parsed.selectedSalaryTemplateCode) {
             selectedSalaryTemplateCode.value = parsed.selectedSalaryTemplateCode
             if (!Array.isArray(parsed.details) || parsed.details.length === 0) {
@@ -282,7 +306,8 @@ onMounted(async () => {
 
 const tableHeaders: UiTableHeader[] = [
     { key: 'salaryCode', label: 'Salary Code', thClass: 'w-1/4' },
-    { key: 'amount', label: 'Amount', thClass: 'w-1/4' },
+    { key: 'dependencyCode', label: 'Dependency Salary', thClass: 'w-1/4' },
+    { key: 'amount', label: 'Amount', thClass: 'w-1/5' },
     { key: 'remark', label: 'Remarks/Specific Details', thClass: 'w-1/3' },
     { key: 'action', label: 'Action', align: 'center', thClass: 'w-16' },
 ]
@@ -368,6 +393,11 @@ const tableHeaders: UiTableHeader[] = [
                             placeholder="Select salary code" />
                     </template>
 
+                    <template #cell-dependencyCode="{ index }">
+                        <UiInlineSelect v-model="details[index].dependencyCode" :options="dependencySalaryOptions"
+                            placeholder="Select dependency" />
+                    </template>
+
                     <template #cell-amount="{ index }">
                         <UiInlineInput v-model="details[index].amount" type="text" placeholder="0" />
                     </template>
@@ -376,7 +406,7 @@ const tableHeaders: UiTableHeader[] = [
                         <UiInlineInput v-model="details[index].remark" type="text"
                             placeholder="Add specific details..." />
                     </template>
-
+                    
                     <template #cell-action="{ index }">
                         <button class="text-slate-400 hover:text-red-500 transition-colors" type="button"
                             @click="removeDetail(index)">
