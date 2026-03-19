@@ -32,6 +32,7 @@ export type EmployeeDailyWorkListResponse = {
   userProfileCode?: string;
   employeeName?: string;
   fullName?: string;
+  workType?: WorkType;
   departmentName?: string;
   department?: string;
   logDay?: string;

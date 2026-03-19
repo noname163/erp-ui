@@ -21,6 +21,7 @@ type LogWorkRow = {
   code: string
   userProfileCode: string
   employeeName: string
+  workType: string
   department: string
   logDay: string
   startTime: string
@@ -112,6 +113,7 @@ function normalizeRow(item: EmployeeDailyWorkListResponse, index: number): LogWo
     code,
     userProfileCode: String(item?.userProfileCode ?? item?.code ?? ''),
     employeeName,
+    workType: String(item?.workType ?? '').trim(),
     department: String(item?.departmentName ?? item?.department ?? '-'),
     logDay: String(item?.logDay ?? ''),
     startTime: String(item?.startTime ?? ''),
@@ -366,7 +368,15 @@ function exportCsv() {
                   {{ initials(row.employeeName) }}
                 </div>
                 <div>
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ row.employeeName }}</p>
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ row.employeeName }}</p>
+                    <span
+                      v-if="row.workType"
+                      class="text-[11px] font-medium text-slate-500 dark:text-slate-400"
+                    >
+                      {{ row.workType }}
+                    </span>
+                  </div>
                   <p class="text-[11px] text-slate-500 dark:text-slate-400">
                     {{ row.department || row.userProfileCode || '-' }}
                   </p>
