@@ -19,10 +19,17 @@ export type EmployeeSalarySlipRequest = EmployeeSalaryRequest & {
 }
 
 export type EmployeeSalarySlipDetailRequest = {
-  salaryCode: string
-  amount: string
-  dependencyCode?: string
-}
+  salaryCode: string;
+  amount: string;
+  dependencyCode?: string;
+  dayType:
+    | "NORMAL"
+    | "HOLIDAY_WORK"
+    | "WEEKEND_WORK"
+    | "PTO_PAID"
+    | "PTO_UNPAID"
+    | "UNPAID_LEAVE";
+};
 
 export type EmployeeSalaryListQuery = {
   employeeName?: string

@@ -4,6 +4,8 @@ import { useAuthStore } from "@/stores/auth";
 
 import LoginPage from "@/pages/LoginPage.vue";
 import DashboardPage from "@/pages/DashboardPage.vue";
+import CalendarListPage from "@/pages/CalendarListPage.vue";
+import CalendarBuilderPage from "@/pages/CalendarBuilderPage.vue";
 import CompanyListPage from "@/pages/CompanyListPage.vue";
 import CreateCompanyPage from "@/pages/CreateCompanyPage.vue";
 import DepartmentManagementPage from "@/pages/DepartmentManagementPage.vue";
@@ -40,6 +42,32 @@ const router = createRouter({
           "SYSTEM_ADMIN",
           "ADMIN",
           "COMPANY_MANAGER",
+        ] satisfies RoleCode[],
+      },
+    },
+    {
+      path: AppRoute.CALENDARS,
+      component: CalendarListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
+        ] satisfies RoleCode[],
+      },
+    },
+    {
+      path: AppRoute.CALENDAR_BUILDER,
+      component: CalendarBuilderPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
         ] satisfies RoleCode[],
       },
     },

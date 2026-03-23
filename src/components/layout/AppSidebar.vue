@@ -12,6 +12,7 @@ const auth = useAuthStore()
 
 const items = computed<NavItem[]>(() => [
     { label: 'Dashboard', icon: 'dashboard', to: AppRoute.DASHBOARD, roles: ['SYSTEM_ADMIN', "ADMIN", 'COMPANY_MANAGER'] },
+    { label: 'Calendars', icon: 'calendar_today', to: AppRoute.CALENDARS, roles: ['SYSTEM_ADMIN', 'ADMIN', 'COMPANY_MANAGER', 'HUMAN_RESOURCES'] },
     { label: 'Companies', icon: 'business', to: AppRoute.COMPANIES, roles: ['SYSTEM_ADMIN', "ADMIN"] },
     { label: 'Departments', icon: 'apartment', to: AppRoute.DEPARTMENTS, roles: ['SYSTEM_ADMIN', "ADMIN", 'COMPANY_MANAGER'] },
     { label: 'HR Overview', icon: 'group', to: AppRoute.HR_OVERVIEW, roles: ['HUMAN_RESOURCES'] },
@@ -31,7 +32,7 @@ function canSee(roles?: string[]) {
 }
 
 function isActive(path: string) {
-    return route.path === path
+    return route.path === path || (path !== '/' && route.path.startsWith(`${path}/`))
 }
 </script>
 

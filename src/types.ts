@@ -2,6 +2,8 @@ export enum AppRoute {
   LOGIN = "/",
   RESET_PASSWORD = "/reset-password",
   DASHBOARD = "/dashboard",
+  CALENDARS = "/calendars",
+  CALENDAR_BUILDER = "/calendars/new",
   COMPANIES = "/companies",
   CREATE_COMPANY = "/companies/new",
   DEPARTMENTS = "/departments",
