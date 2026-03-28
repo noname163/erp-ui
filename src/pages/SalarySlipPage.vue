@@ -28,6 +28,15 @@ const LS_DRAFT = 'erp.salarySlip.draft'
 
 type SelectOption = { value: string; label: string }
 
+const dayTypeOptions: SelectOption[] = [
+    { value: 'NORMAL', label: 'Normal' },
+    { value: 'HOLIDAY_WORK', label: 'Holiday Work' },
+    { value: 'WEEKEND_WORK', label: 'Weekend Work' },
+    { value: 'PTO_PAID', label: 'PTO Paid' },
+    { value: 'PTO_UNPAID', label: 'PTO Unpaid' },
+    { value: 'UNPAID_LEAVE', label: 'Unpaid Leave' },
+]
+
 const currencyOptions = [
     { value: 'USD', label: 'USD - US Dollar' },
     { value: 'EUR', label: 'EUR - Euro' },
@@ -108,6 +117,7 @@ function createEmptyDetail(): SalaryDetailRow {
         salaryCode: salaryCodeOptions.value[0]?.value ?? '',
         amount: '0',
         dependencyCode: '',
+        dayType: 'NORMAL',
         remark: '',
     }
 }
@@ -121,6 +131,7 @@ const compiledPayload = computed<EmployeeSalarySlipRequest>(() => ({
         salaryCode: d.salaryCode,
         amount: d.amount,
         dependencyCode: d.dependencyCode?.trim() || undefined,
+        dayType: d.dayType,
     })),
 }))
 
@@ -198,6 +209,7 @@ function normalizeTemplateDetails(res: any): SalaryDetailRow[] {
                 salaryCode,
                 amount: String(item?.amount ?? '0'),
                 dependencyCode: String(item?.dependencyCode ?? '').trim(),
+                dayType: String(item?.dayType ?? 'NORMAL') as SalaryDetailRow['dayType'],
                 remark: String(item?.remark ?? item?.description ?? ''),
             }
         })
@@ -305,10 +317,11 @@ onMounted(async () => {
 })
 
 const tableHeaders: UiTableHeader[] = [
-    { key: 'salaryCode', label: 'Salary Code', thClass: 'w-1/4' },
-    { key: 'dependencyCode', label: 'Dependency Salary', thClass: 'w-1/4' },
-    { key: 'amount', label: 'Amount', thClass: 'w-1/5' },
-    { key: 'remark', label: 'Remarks/Specific Details', thClass: 'w-1/3' },
+    { key: 'salaryCode', label: 'Salary Code', thClass: 'w-1/5' },
+    { key: 'dayType', label: 'Day Type', thClass: 'w-1/5' },
+    { key: 'dependencyCode', label: 'Dependency Salary', thClass: 'w-1/5' },
+    { key: 'amount', label: 'Amount', thClass: 'w-1/6' },
+    { key: 'remark', label: 'Remarks/Specific Details', thClass: 'w-1/4' },
     { key: 'action', label: 'Action', align: 'center', thClass: 'w-16' },
 ]
 </script>
@@ -391,6 +404,14 @@ const tableHeaders: UiTableHeader[] = [
                     <template #cell-salaryCode="{ row, index }">
                         <UiInlineSelect v-model="details[index].salaryCode" :options="salaryCodeOptions"
                             placeholder="Select salary code" />
+                    </template>
+
+                    <template #cell-dayType="{ index }">
+                        <UiInlineSelect
+                            v-model="details[index].dayType"
+                            :options="dayTypeOptions"
+                            placeholder="Select work type"
+                        />
                     </template>
 
                     <template #cell-dependencyCode="{ index }">
