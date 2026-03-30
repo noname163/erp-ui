@@ -21,6 +21,8 @@ import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
 import EmployeeListPage from "@/pages/EmployeeListPage.vue";
 import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
 import SalarySlipListPage from "@/pages/SalarySlipListPage.vue";
+import PolicyListPage from "@/pages/PolicyListPage.vue";
+import PolicyBuilderPage from "@/pages/PolicyBuilderPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -144,6 +146,16 @@ const router = createRouter({
       path: AppRoute.PAYROLL_BUILDER,
       component: SalaryTemplateBuilderPage,
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+        path: AppRoute.PAYROLL_POLICIES,
+        component: PolicyListPage,
+        meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+        path: AppRoute.PAYROLL_POLICY_BUILDER,
+        component: PolicyBuilderPage,
+        meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
       path: AppRoute.SALARY_SLIP,
