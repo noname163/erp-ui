@@ -13,6 +13,8 @@ export enum AppRoute {
   PAYROLL_TEMPLATES = "/payroll/templates",
   PAYROLL_BUILDER = "/payroll/builder",
   PAYROLL_COMPONENTS = "/payroll/components",
+  PAYROLL_POLICY_BUILDER = "/payroll/policy/builder",
+  PAYROLL_POLICIES = "/payroll/policies",
   SALARY_SLIP = "/salary/slip",
   SALARY_SLIP_LIST = "/salary/slips",
   LOG_WORK_LIST = "/timesheets",

@@ -23,6 +23,7 @@ const items = computed<NavItem[]>(() => [
     { label: 'Authentication', icon: 'verified_user', to: AppRoute.RESET_PASSWORD },
     { label: 'Working Logs', icon: 'history', to: AppRoute.LOG_WORK_LIST, roles: ['EMPLOYEE', 'HUMAN_RESOURCES'] },
     { label: 'Bulk Log Work', icon: 'playlist_add', to: AppRoute.BULK_LOG_WORK, roles: ['HUMAN_RESOURCE'] },
+    { label: 'Policy List', icon: 'gavel', to: AppRoute.PAYROLL_POLICIES, roles: ['HUMAN_RESOURCES'] },
 ])
 
 function canSee(roles?: string[]) {
