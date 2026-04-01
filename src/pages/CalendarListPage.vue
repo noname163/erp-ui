@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import CalendarPageHeader from "@/components/calendar/CalendarPageHeader.vue";
 import UiButton from "@/components/ui/UiButton.vue";
 import UiCard from "@/components/ui/UiCard.vue";
 import UiCardBody from "@/components/ui/UiCardBody.vue";
+import UiDropdownMenu from "@/components/ui/UiDropdownMenu.vue";
 import UiIcon from "@/components/ui/UiIcon.vue";
 import UiInput from "@/components/ui/UiInput.vue";
 import UiSelect from "@/components/ui/UiSelect.vue";
@@ -110,12 +111,6 @@ async function loadCalendars() {
 }
 
 onMounted(loadCalendars);
-onMounted(() => {
-  document.addEventListener("pointerdown", onDocumentPointerDown, true);
-});
-onBeforeUnmount(() => {
-  document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-});
 
 function normalizeCalendarRow(item: CompanyCalendarListResponse, index: number): CalendarRecord {
   const code = String(item?.code ?? `CAL-${String(index + 1).padStart(3, "0")}`);
@@ -169,20 +164,19 @@ async function setPage(page: number) {
   await loadCalendars();
 }
 
-function toggleCalendarActionMenu(code: string) {
-  openActionCode.value = code;
-}
+function setCalendarActionMenu(code: string, open: boolean) {
+  if (open) {
+    openActionCode.value = code;
+    return;
+  }
 
-function showCalendarActionMenu(code: string) {
-  openActionCode.value = code;
-}
-
-function hideCalendarActionMenu() {
-  openActionCode.value = null;
+  if (openActionCode.value === code) {
+    openActionCode.value = null;
+  }
 }
 
 function viewCalendar(row: CalendarRecord) {
-  hideCalendarActionMenu();
+  setCalendarActionMenu(row.code, false);
   router.push({
     path: AppRoute.CALENDAR_BUILDER,
     query: {
@@ -196,12 +190,6 @@ function viewCalendar(row: CalendarRecord) {
       note: row.note,
     },
   });
-}
-
-function onDocumentPointerDown(event: PointerEvent) {
-  const target = event.target;
-  if (target instanceof Element && target.closest("[data-calendar-action-menu]")) return;
-  hideCalendarActionMenu();
 }
 </script>
 
@@ -377,28 +365,29 @@ function onDocumentPointerDown(event: PointerEvent) {
 
             <template #cell-actions="{ row }">
               <div class="flex justify-end">
-                <div
-                  class="relative"
-                  data-calendar-action-menu
-                  @mouseenter="showCalendarActionMenu(row.code)"
-                  @mouseleave="hideCalendarActionMenu"
+                <UiDropdownMenu
+                  :model-value="openActionCode === row.code"
+                  panel-class="w-36"
+                  @update:model-value="(open) => setCalendarActionMenu(row.code, open)"
                 >
-                  <button
-                    type="button"
-                    class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-primary/5 hover:text-primary overflow"
-                    @click.stop="toggleCalendarActionMenu(row.code)"
-                  >
-                    <UiIcon name="more_vert" size="18px" />
-                  </button>
+                  <template #trigger="{ toggle }">
+                    <button
+                      type="button"
+                      class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-primary/5 hover:text-primary"
+                      @click.stop="toggle"
+                    >
+                      <UiIcon name="more_vert" size="18px" />
+                    </button>
+                  </template>
 
-                  <div
-                    v-if="openActionCode === row.code"
-                    class="absolute right-0 top-full z-30 mt-2 w-36 rounded-xl border border-primary/10 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-950"
-                  >
+                  <template #default="{ close }">
                     <button
                       type="button"
                       class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-primary/10 hover:text-primary dark:text-slate-200 dark:hover:bg-slate-900"
-                      @click.stop="viewCalendar(row)"
+                      @click.stop="
+                        close();
+                        viewCalendar(row);
+                      "
                     >
                       <UiIcon name="visibility" size="18px" />
                       <span>View</span>
@@ -413,8 +402,8 @@ function onDocumentPointerDown(event: PointerEvent) {
                       <UiIcon name="delete" size="18px" />
                       <span>Delete</span>
                     </button>
-                  </div>
-                </div>
+                  </template>
+                </UiDropdownMenu>
               </div>
             </template>
 

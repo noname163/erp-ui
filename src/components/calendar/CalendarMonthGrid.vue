@@ -21,8 +21,9 @@ type CalendarCell = {
   date: string;
   day: number;
   inMonth: boolean;
-  type: CalendarDayType;
+  type: CalendarDayType | null;
   label: string;
+  explicit: boolean;
 };
 
 const props = withDefaults(defineProps<Props>(), {
@@ -64,6 +65,7 @@ const cells = computed<CalendarCell[]>(() => {
       inMonth: date.getMonth() === monthIndex,
       type: resolved.type,
       label: resolved.label,
+      explicit: resolved.explicit,
     };
   });
 });
@@ -73,6 +75,9 @@ const monthLabel = computed(() => formatMonthLabel(props.month, props.compact));
 function cardClass(cell: CalendarCell) {
   if (!cell.inMonth) {
     return "bg-slate-100/70 text-slate-300 dark:bg-slate-950 dark:text-slate-700";
+  }
+  if (!cell.type) {
+    return "bg-white text-slate-900 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-white dark:ring-slate-800";
   }
   if (cell.type === "HOLIDAY") {
     return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-300 dark:ring-emerald-900/60";
@@ -89,11 +94,12 @@ function cardClass(cell: CalendarCell) {
   return "bg-primary/5 text-primary ring-1 ring-primary/10 dark:bg-primary/10 dark:text-blue-300 dark:ring-primary/20";
 }
 
-function dotClass(type: CalendarDayType) {
-  if (type === "HOLIDAY") return "bg-emerald-500";
-  if (type === "WEEKEND_WORK") return "bg-amber-500";
-  if (type === "COMPANY_DAY_OFF") return "bg-rose-500";
-  if (type === "WEEKEND") return "bg-slate-400";
+function dotClass(cell: CalendarCell) {
+  if (!cell.type) return "";
+  if (cell.type === "HOLIDAY") return "bg-emerald-500";
+  if (cell.type === "WEEKEND_WORK") return "bg-amber-500";
+  if (cell.type === "COMPANY_DAY_OFF") return "bg-rose-500";
+  if (cell.type === "WEEKEND") return "bg-slate-400";
   return "bg-primary";
 }
 
@@ -146,9 +152,9 @@ function selectDay(cell: CalendarCell) {
             </span>
 
             <span
-              v-if="cell.inMonth"
+              v-if="cell.inMonth && dotClass(cell)"
               class="mt-1 inline-block rounded-full"
-              :class="[dotClass(cell.type), compact ? 'size-1.5' : 'size-2']"
+              :class="[dotClass(cell), compact ? 'size-1.5' : 'size-2']"
             ></span>
           </div>
 

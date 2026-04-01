@@ -25,7 +25,6 @@ import {
   formatMonthLabel,
   getMonthDateKeys,
   getMonthsForView,
-  isWeekend,
   summarizeMonths,
 } from "@/services/calendar.service";
 import type {
@@ -52,7 +51,7 @@ const route = useRoute();
 const form = ref(calendarService.createDraft());
 const assignments = ref<CalendarAssignment[]>(calendarService.createAssignments());
 const focusMonth = ref("2026-04");
-const selectedType = ref<CalendarEditorSelection>("WORKING_DAY");
+const selectedType = ref<CalendarEditorSelection>("NORMAL");
 const assignmentLabel = ref("");
 const selectedDate = ref<string | null>(null);
 const viewMode = ref<CalendarViewMode>("MONTH");
@@ -64,7 +63,7 @@ const message = ref("");
 const clearOption: CalendarEditorOption = {
   value: "CLEAR_DATE",
   label: "Clear date",
-  description: "Remove an explicit override and revert to the default calendar day",
+  description: "Remove an explicit override and leave the date untyped",
   icon: "backspace",
   dotClass: "bg-slate-900 dark:bg-white",
 };
@@ -81,7 +80,7 @@ const pageEyebrow = computed(() =>
 );
 const pageDescription = computed(() =>
   isEditMode.value
-    ? "Loaded from the selected calendar code. Dates are fetched from the company calendar dates endpoint and shown in the existing editor layout."
+    ? "Loaded from the selected calendar code. Changes are saved back to the company calendar update endpoint."
     : "Define operating periods and assign exceptions for holidays, shutdowns, and weekend coverage.",
 );
 
@@ -139,7 +138,7 @@ async function initializeEditor() {
   message.value = "";
   selectedDate.value = null;
   assignmentLabel.value = "";
-  selectedType.value = "WORKING_DAY";
+  selectedType.value = "NORMAL";
   viewMode.value = "MONTH";
 
   if (!isEditMode.value) {
@@ -173,17 +172,7 @@ function applyDaySelection(date: string) {
     return;
   }
 
-  const naturalWeekend = isWeekend(date);
-
   assignments.value = assignments.value.filter((item) => item.date !== date);
-
-  if (nextType === "WORKING_DAY" && !naturalWeekend) {
-    return;
-  }
-
-  if (nextType === "WEEKEND" && naturalWeekend) {
-    return;
-  }
 
   assignments.value = [...assignments.value, createAssignment(date, nextType, assignmentLabel.value)].sort((a, b) =>
     a.date.localeCompare(b.date),
@@ -218,11 +207,6 @@ async function saveCalendar() {
   error.value = "";
   message.value = "";
 
-  if (isEditMode.value) {
-    message.value = "Calendar dates are loaded in edit mode. An update API is not configured in this client yet.";
-    return;
-  }
-
   if (!compiledCalendarRequest.value.name) {
     error.value = "Calendar name is required.";
     return;
@@ -243,22 +227,23 @@ async function saveCalendar() {
     error.value = "Notes are required.";
     return;
   }
-  if (compiledCalendarRequest.value.dates.length === 0) {
-    error.value = "Add at least one calendar date before saving.";
-    return;
-  }
 
   saving.value = true;
 
   try {
-    const response = await calendarService.create(compiledCalendarRequest.value);
-    if (response.status === 201) {
+    const response = isEditMode.value
+      ? await calendarService.update(calendarCode.value, compiledCalendarRequest.value)
+      : await calendarService.create(compiledCalendarRequest.value);
+
+    if (response.status === 200 || response.status === 201) {
       await router.push(AppRoute.CALENDARS);
       return;
     }
     message.value = `Calendar saved with status ${response.status}.`;
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? "Create company calendar failed";
+    error.value = e?.response?.data?.message ?? (isEditMode.value
+      ? "Update company calendar failed"
+      : "Create company calendar failed");
   } finally {
     saving.value = false;
   }
@@ -270,7 +255,7 @@ function exportCsv() {
       const explicit = assignmentMap.value.get(date);
       return [
         date,
-        explicit?.type ?? (isWeekend(date) ? "WEEKEND" : "WORKING_DAY"),
+        explicit?.type ?? "",
         explicit?.label ?? "",
       ];
     }),
@@ -338,12 +323,13 @@ function normalizeAssignment(item: Record<string, unknown>) {
   if (!date) return null;
 
   const type = normalizeDayType(firstDefined(item.dayType, item.type));
+  if (!type) return null;
   const response = item as CompanyCalendarDateResponse;
 
   return createAssignment(date, type, queryString(firstDefined(item.note, item.label, response.note)));
 }
 
-function normalizeDayType(value: unknown): CalendarDayType {
+function normalizeDayType(value: unknown): CalendarDayType | null {
   const token = queryString(value)
     .toUpperCase()
     .replaceAll("-", "_")
@@ -352,8 +338,9 @@ function normalizeDayType(value: unknown): CalendarDayType {
   if (token === "HOLIDAY") return "HOLIDAY";
   if (token === "WEEKEND_WORK") return "WEEKEND_WORK";
   if (token === "COMPANY_DAY_OFF") return "COMPANY_DAY_OFF";
+  if (token === "NORMAL") return "NORMAL";
   if (token === "WEEKEND") return "WEEKEND";
-  return "WORKING_DAY";
+  return null;
 }
 
 function queryString(value: unknown): string {
@@ -379,7 +366,7 @@ function resolveFocusMonth(date: string, fallback: string) {
 
 function sanitizeNote(value: string) {
   const trimmed = value.trim();
-  if (!trimmed || trimmed === "-" || trimmed === "â€”") return "";
+  if (!trimmed || trimmed === "-" || trimmed === "\u2014") return "";
   return trimmed;
 }
 
@@ -420,7 +407,8 @@ function asRecord(value: unknown) {
         class="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-700"
       >
         Viewing calendar <span class="font-bold">{{ calendarCode }}</span> in edit layout. Dates are loaded from
-        <span class="font-mono">/api/company-calendars/{{ calendarCode }}/dates</span>.
+        <span class="font-mono">/api/company-calendars/{{ calendarCode }}/dates</span> and saved with
+        <span class="font-mono">PUT /api/company-calendars/{{ calendarCode }}</span>.
       </div>
 
       <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
@@ -507,12 +495,9 @@ function asRecord(value: unknown) {
           </UiCard>
 
           <UiButton block leading-icon="save" :disabled="saving || loadingDetails" @click="saveCalendar">
-            {{ saving ? "Saving..." : isEditMode ? "Update API Required" : "Save Calendar Template" }}
+            {{ saving ? "Saving..." : isEditMode ? "Save Changes" : "Save Calendar Template" }}
           </UiButton>
 
-          <p v-if="isEditMode" class="text-xs text-slate-500 dark:text-slate-400">
-            Editing is enabled locally. Persisting changes needs an update endpoint for company calendars.
-          </p>
           <p v-if="error" class="text-sm font-medium text-red-500">{{ error }}</p>
           <p v-if="message" class="text-sm font-medium text-emerald-600">{{ message }}</p>
         </div>
@@ -598,7 +583,7 @@ function asRecord(value: unknown) {
                 <div class="flex flex-wrap items-center gap-5">
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-primary"></span>
-                    {{ visibleCounts.WORKING_DAY }} Work Days
+                    {{ visibleCounts.NORMAL }} Work Days
                   </div>
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-emerald-500"></span>
@@ -631,7 +616,7 @@ function asRecord(value: unknown) {
           <p class="font-bold">Selection Active</p>
           <p class="mt-1 text-slate-300">
             <template v-if="selectedType === 'CLEAR_DATE'">
-              Clicking dates will remove explicit overrides and restore the default day type.
+              Clicking dates will remove explicit overrides and leave the date untyped.
             </template>
             <template v-else>
               Clicking dates will assign <span class="text-blue-300">{{ currentSelection.label }}</span>
