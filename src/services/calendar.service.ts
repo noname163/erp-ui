@@ -216,6 +216,12 @@ export const calendarService = {
     );
     return data;
   },
+  async listDates(code: string) {
+    const { data } = await http.get<CompanyCalendarDateResponse[] | any>(
+      `/api/company-calendars/${encodeURIComponent(code)}/dates`,
+    );
+    return data;
+  },
   async create(req: CompanyCalendarRequest) {
     const response = await http.post<CompanyCalendarResponse>("/api/company-calendars", req);
     return {

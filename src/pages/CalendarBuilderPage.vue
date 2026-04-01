@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import CalendarLegendOption from "@/components/calendar/CalendarLegendOption.vue";
 import CalendarMonthGrid from "@/components/calendar/CalendarMonthGrid.vue";
@@ -31,8 +31,9 @@ import {
 import type {
   CalendarAssignment,
   CalendarDayType,
-  CompanyCalendarRequest,
   CalendarViewMode,
+  CompanyCalendarDateResponse,
+  CompanyCalendarRequest,
 } from "@/services/calendar.service";
 import { AppRoute } from "@/types";
 
@@ -46,6 +47,7 @@ type CalendarEditorOption = {
 };
 
 const router = useRouter();
+const route = useRoute();
 
 const form = ref(calendarService.createDraft());
 const assignments = ref<CalendarAssignment[]>(calendarService.createAssignments());
@@ -54,7 +56,8 @@ const selectedType = ref<CalendarEditorSelection>("WORKING_DAY");
 const assignmentLabel = ref("");
 const selectedDate = ref<string | null>(null);
 const viewMode = ref<CalendarViewMode>("MONTH");
-const loading = ref(false);
+const saving = ref(false);
+const loadingDetails = ref(false);
 const error = ref("");
 const message = ref("");
 
@@ -67,6 +70,20 @@ const clearOption: CalendarEditorOption = {
 };
 
 const editorOptions: CalendarEditorOption[] = [...calendarTypeOptions, clearOption];
+
+const calendarCode = computed(() => queryString(route.query.code));
+const isEditMode = computed(() => calendarCode.value.length > 0);
+const pageTitle = computed(() => (isEditMode.value ? "Edit Calendar" : "Create Calendar"));
+const pageEyebrow = computed(() =>
+  isEditMode.value
+    ? ["Organization", "Calendars", calendarCode.value]
+    : ["Organization", "Calendars", "New Calendar"],
+);
+const pageDescription = computed(() =>
+  isEditMode.value
+    ? "Loaded from the selected calendar code. Dates are fetched from the company calendar dates endpoint and shown in the existing editor layout."
+    : "Define operating periods and assign exceptions for holidays, shutdowns, and weekend coverage.",
+);
 
 const visibleMonths = computed(() => getMonthsForView(focusMonth.value, viewMode.value));
 const assignmentMap = computed(() => createAssignmentMap(assignments.value));
@@ -109,6 +126,35 @@ const compiledCalendarRequest = computed<CompanyCalendarRequest>(() => ({
     .sort((a, b) => a.calDate.localeCompare(b.calDate)),
 }));
 
+watch(
+  () => route.fullPath,
+  () => {
+    void initializeEditor();
+  },
+  { immediate: true },
+);
+
+async function initializeEditor() {
+  error.value = "";
+  message.value = "";
+  selectedDate.value = null;
+  assignmentLabel.value = "";
+  selectedType.value = "WORKING_DAY";
+  viewMode.value = "MONTH";
+
+  if (!isEditMode.value) {
+    form.value = calendarService.createDraft();
+    assignments.value = calendarService.createAssignments();
+    focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
+    return;
+  }
+
+  form.value = buildDraftFromQuery();
+  assignments.value = [];
+  focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
+  await loadCalendarDates(calendarCode.value);
+}
+
 function setViewMode(mode: CalendarViewMode) {
   viewMode.value = mode;
 }
@@ -144,9 +190,38 @@ function applyDaySelection(date: string) {
   );
 }
 
+async function loadCalendarDates(code: string) {
+  if (!code) return;
+
+  loadingDetails.value = true;
+
+  try {
+    const response = await calendarService.listDates(code);
+    const items = normalizeCollection(response);
+    assignments.value = items
+      .map(normalizeAssignment)
+      .filter((item): item is CalendarAssignment => item !== null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (assignments.value.length > 0) {
+      focusMonth.value = assignments.value[0].date.slice(0, 7);
+    }
+  } catch (e: any) {
+    assignments.value = [];
+    error.value = e?.response?.data?.message ?? "Unable to load calendar dates.";
+  } finally {
+    loadingDetails.value = false;
+  }
+}
+
 async function saveCalendar() {
   error.value = "";
   message.value = "";
+
+  if (isEditMode.value) {
+    message.value = "Calendar dates are loaded in edit mode. An update API is not configured in this client yet.";
+    return;
+  }
 
   if (!compiledCalendarRequest.value.name) {
     error.value = "Calendar name is required.";
@@ -173,7 +248,7 @@ async function saveCalendar() {
     return;
   }
 
-  loading.value = true;
+  saving.value = true;
 
   try {
     const response = await calendarService.create(compiledCalendarRequest.value);
@@ -185,7 +260,7 @@ async function saveCalendar() {
   } catch (e: any) {
     error.value = e?.response?.data?.message ?? "Create company calendar failed";
   } finally {
-    loading.value = false;
+    saving.value = false;
   }
 }
 
@@ -213,15 +288,125 @@ function exportCsv() {
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
+function buildDraftFromQuery() {
+  const defaults = calendarService.createDraft();
+  return {
+    name: queryString(route.query.name) || defaults.name,
+    effectiveFrom: queryString(route.query.effectiveFrom) || defaults.effectiveFrom,
+    effectiveTo: queryString(route.query.effectiveTo) || defaults.effectiveTo,
+    region: queryString(route.query.region) || defaults.region,
+    timezone: queryString(route.query.timezone) || defaults.timezone,
+    description: sanitizeNote(queryString(route.query.note)) || "",
+  };
+}
+
+function normalizeCollection(payload: unknown): Record<string, unknown>[] {
+  if (Array.isArray(payload)) {
+    return payload
+      .map((item) => asRecord(item))
+      .filter((item): item is Record<string, unknown> => item !== null);
+  }
+
+  const record = asRecord(payload);
+  if (!record) return [];
+
+  const directCollection = firstDefined(
+    record.content,
+    record.data,
+    record.items,
+    record.results,
+    record.rows,
+    record.records,
+  );
+
+  if (Array.isArray(directCollection)) {
+    return directCollection
+      .map((item) => asRecord(item))
+      .filter((item): item is Record<string, unknown> => item !== null);
+  }
+
+  if (directCollection && typeof directCollection === "object") {
+    return normalizeCollection(directCollection);
+  }
+
+  return [];
+}
+
+function normalizeAssignment(item: Record<string, unknown>) {
+  const date = toDateString(firstDefined(item.calDate, item.date, item.workDate));
+  if (!date) return null;
+
+  const type = normalizeDayType(firstDefined(item.dayType, item.type));
+  const response = item as CompanyCalendarDateResponse;
+
+  return createAssignment(date, type, queryString(firstDefined(item.note, item.label, response.note)));
+}
+
+function normalizeDayType(value: unknown): CalendarDayType {
+  const token = queryString(value)
+    .toUpperCase()
+    .replaceAll("-", "_")
+    .replaceAll(" ", "_");
+
+  if (token === "HOLIDAY") return "HOLIDAY";
+  if (token === "WEEKEND_WORK") return "WEEKEND_WORK";
+  if (token === "COMPANY_DAY_OFF") return "COMPANY_DAY_OFF";
+  if (token === "WEEKEND") return "WEEKEND";
+  return "WORKING_DAY";
+}
+
+function queryString(value: unknown): string {
+  if (Array.isArray(value)) return queryString(value[0]);
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function toDateString(value: unknown) {
+  const normalized = queryString(value);
+  if (!normalized) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return normalized;
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+}
+
+function resolveFocusMonth(date: string, fallback: string) {
+  const normalized = toDateString(date);
+  return normalized ? normalized.slice(0, 7) : fallback;
+}
+
+function sanitizeNote(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "-" || trimmed === "â€”") return "";
+  return trimmed;
+}
+
+function firstDefined(...values: unknown[]) {
+  return values.find((value) => {
+    if (value === undefined || value === null) return false;
+    if (typeof value === "string") return value.trim().length > 0;
+    return true;
+  });
+}
+
+function asRecord(value: unknown) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  return null;
+}
 </script>
 
 <template>
   <AppLayout>
     <div class="space-y-8">
       <CalendarPageHeader
-        :eyebrow="['Organization', 'Calendars', 'New Calendar']"
-        title="Create Calendar"
-        description="Define operating periods and assign exceptions for holidays, shutdowns, and weekend coverage."
+        :eyebrow="pageEyebrow"
+        :title="pageTitle"
+        :description="pageDescription"
       >
         <template #actions>
           <UiButton variant="outline" leading-icon="arrow_back" @click="router.push(AppRoute.CALENDARS)">
@@ -229,6 +414,14 @@ function exportCsv() {
           </UiButton>
         </template>
       </CalendarPageHeader>
+
+      <div
+        v-if="isEditMode"
+        class="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-700"
+      >
+        Viewing calendar <span class="font-bold">{{ calendarCode }}</span> in edit layout. Dates are loaded from
+        <span class="font-mono">/api/company-calendars/{{ calendarCode }}/dates</span>.
+      </div>
 
       <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
         <div class="space-y-6 xl:col-span-4">
@@ -241,7 +434,7 @@ function exportCsv() {
                 <div>
                   <h2 class="text-xl font-bold text-slate-900 dark:text-white">Configuration</h2>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Core metadata for the calendar template.
+                    {{ isEditMode ? "Metadata passed from the calendar list selection." : "Core metadata for the calendar template." }}
                   </p>
                 </div>
               </div>
@@ -313,10 +506,13 @@ function exportCsv() {
             </UiCardBody>
           </UiCard>
 
-          <UiButton block leading-icon="save" :disabled="loading" @click="saveCalendar">
-            {{ loading ? "Saving..." : "Save Calendar Template" }}
+          <UiButton block leading-icon="save" :disabled="saving || loadingDetails" @click="saveCalendar">
+            {{ saving ? "Saving..." : isEditMode ? "Update API Required" : "Save Calendar Template" }}
           </UiButton>
 
+          <p v-if="isEditMode" class="text-xs text-slate-500 dark:text-slate-400">
+            Editing is enabled locally. Persisting changes needs an update endpoint for company calendars.
+          </p>
           <p v-if="error" class="text-sm font-medium text-red-500">{{ error }}</p>
           <p v-if="message" class="text-sm font-medium text-emerald-600">{{ message }}</p>
         </div>
@@ -357,8 +553,12 @@ function exportCsv() {
             </div>
 
             <div class="p-4 md:p-6">
+              <div v-if="loadingDetails" class="rounded-xl bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/50">
+                Loading calendar dates...
+              </div>
+
               <CalendarMonthGrid
-                v-if="viewMode === 'MONTH'"
+                v-else-if="viewMode === 'MONTH'"
                 :month="visibleMonths[0]"
                 :assignments="assignments"
                 :selected-date="selectedDate"
@@ -366,7 +566,7 @@ function exportCsv() {
                 @select-day="applyDaySelection"
               />
 
-              <div v-else-if="viewMode === 'QUARTER'" class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+              <div v-else-if="!loadingDetails && viewMode === 'QUARTER'" class="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 <CalendarMonthGrid
                   v-for="month in visibleMonths"
                   :key="month"
@@ -379,7 +579,7 @@ function exportCsv() {
                 />
               </div>
 
-              <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <div v-else-if="!loadingDetails" class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 <CalendarMonthGrid
                   v-for="month in visibleMonths"
                   :key="month"

@@ -11,6 +11,8 @@ export enum AppRoute {
   CREATE_EMPLOYEE = "/employees/new",
   HR_OVERVIEW = "/hr",
   PAYROLL_TEMPLATES = "/payroll/templates",
+  PAYROLL_RUNS = "/payroll/runs",
+  PAYROLL_RESULTS = "/payroll/results",
   PAYROLL_BUILDER = "/payroll/builder",
   PAYROLL_COMPONENTS = "/payroll/components",
   PAYROLL_POLICY_BUILDER = "/payroll/policy/builder",

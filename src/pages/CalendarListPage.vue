@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import CalendarPageHeader from "@/components/calendar/CalendarPageHeader.vue";
@@ -31,6 +31,7 @@ const timeZoneFilter = ref("ALL");
 const showFilters = ref(false);
 const currentPage = ref(1);
 const pageSize = 5;
+const openActionCode = ref<string | null>(null);
 
 const rows = ref<CalendarRecord[]>([]);
 const totalElements = ref(0);
@@ -109,6 +110,12 @@ async function loadCalendars() {
 }
 
 onMounted(loadCalendars);
+onMounted(() => {
+  document.addEventListener("pointerdown", onDocumentPointerDown, true);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", onDocumentPointerDown, true);
+});
 
 function normalizeCalendarRow(item: CompanyCalendarListResponse, index: number): CalendarRecord {
   const code = String(item?.code ?? `CAL-${String(index + 1).padStart(3, "0")}`);
@@ -160,6 +167,41 @@ async function setPage(page: number) {
   if (page < 1 || page > totalPages.value || page === currentPage.value) return;
   currentPage.value = page;
   await loadCalendars();
+}
+
+function toggleCalendarActionMenu(code: string) {
+  openActionCode.value = code;
+}
+
+function showCalendarActionMenu(code: string) {
+  openActionCode.value = code;
+}
+
+function hideCalendarActionMenu() {
+  openActionCode.value = null;
+}
+
+function viewCalendar(row: CalendarRecord) {
+  hideCalendarActionMenu();
+  router.push({
+    path: AppRoute.CALENDAR_BUILDER,
+    query: {
+      code: row.code,
+      mode: "edit",
+      name: row.name,
+      effectiveFrom: row.effectiveFrom,
+      effectiveTo: row.effectiveTo ?? "",
+      region: row.region,
+      timezone: row.timezone,
+      note: row.note,
+    },
+  });
+}
+
+function onDocumentPointerDown(event: PointerEvent) {
+  const target = event.target;
+  if (target instanceof Element && target.closest("[data-calendar-action-menu]")) return;
+  hideCalendarActionMenu();
 }
 </script>
 
@@ -260,7 +302,7 @@ async function setPage(page: number) {
         </UiCard>
       </div>
 
-      <UiCard>
+      <UiCard class="overflow-visible">
         <div class="p-0">
           <div v-if="error" class="px-4 py-4 text-sm text-amber-600 md:px-6">{{ error }}</div>
           <div v-if="loading" class="px-4 py-4 text-sm text-slate-500 md:px-6">Loading calendars...</div>
@@ -333,15 +375,46 @@ async function setPage(page: number) {
               </span>
             </template>
 
-            <template #cell-actions>
+            <template #cell-actions="{ row }">
               <div class="flex justify-end">
-                <button
-                  type="button"
-                  class="p-1 text-slate-400 transition-colors hover:text-primary"
-                  @click="router.push(AppRoute.CALENDAR_BUILDER)"
+                <div
+                  class="relative"
+                  data-calendar-action-menu
+                  @mouseenter="showCalendarActionMenu(row.code)"
+                  @mouseleave="hideCalendarActionMenu"
                 >
-                  <UiIcon name="more_vert" size="18px" />
-                </button>
+                  <button
+                    type="button"
+                    class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-primary/5 hover:text-primary overflow"
+                    @click.stop="toggleCalendarActionMenu(row.code)"
+                  >
+                    <UiIcon name="more_vert" size="18px" />
+                  </button>
+
+                  <div
+                    v-if="openActionCode === row.code"
+                    class="absolute right-0 top-full z-30 mt-2 w-36 rounded-xl border border-primary/10 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-950"
+                  >
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-primary/10 hover:text-primary dark:text-slate-200 dark:hover:bg-slate-900"
+                      @click.stop="viewCalendar(row)"
+                    >
+                      <UiIcon name="visibility" size="18px" />
+                      <span>View</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled
+                      class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 dark:text-slate-600"
+                      title="Delete endpoint is not configured"
+                    >
+                      <UiIcon name="delete" size="18px" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </template>
 
