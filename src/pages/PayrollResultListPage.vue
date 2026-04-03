@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -27,6 +28,8 @@ type PayrollResultRow = {
   isRetro: boolean
   retroReason: string | null
 }
+
+const route = useRoute()
 
 const headers: UiTableHeader[] = [
   { key: 'salaryName', label: 'Salary Name', thClass: 'min-w-[160px]' },
@@ -133,6 +136,20 @@ watch(filteredRows, () => {
 watch(linesPerPage, () => {
   page.value = 1
 })
+
+watch(
+  () => route.query.createdDate,
+  (createdDateQuery) => {
+    const createdDateFromRoute = normalizeDateOnly(queryString(createdDateQuery))
+    createdDate.value = createdDateFromRoute
+    appliedFilters.value = {
+      ...appliedFilters.value,
+      createdDate: createdDateFromRoute,
+    }
+    page.value = 1
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   void loadRows()
@@ -359,6 +376,12 @@ function normalizeNullableString(value: unknown) {
   }
 
   return null
+}
+
+function queryString(value: unknown) {
+  if (typeof value === 'string') return value.trim()
+  if (Array.isArray(value) && typeof value[0] === 'string') return value[0].trim()
+  return ''
 }
 
 function toDisplayString(value: unknown, fallback = '-') {

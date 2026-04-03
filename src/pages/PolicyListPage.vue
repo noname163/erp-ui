@@ -309,15 +309,39 @@ function openAssignmentModal(row: PolicyRow) {
     showAssignmentModal.value = true
 }
 
-function handleAssignmentConfirm(selectedIds: string[]) {
+async function handleAssignmentConfirm(employeeCodes: string[]) {
     if (!selectedPolicy.value) return
 
-    assignmentCounts.value = {
-        ...assignmentCounts.value,
-        [selectedPolicy.value.id]: selectedIds.length,
+    if (employeeCodes.length === 0) {
+        error.value = 'Select at least one employee before confirming the assignment.'
+        return
     }
 
-    assignmentMessage.value = `Assigned ${selectedIds.length} employees to ${selectedPolicy.value.name}.`
+    if (!selectedPolicy.value.effectiveFrom || !selectedPolicy.value.effectiveTo) {
+        error.value = 'The selected policy must have both effective dates before employees can be assigned.'
+        return
+    }
+
+    try {
+        error.value = ''
+        assignmentMessage.value = ''
+
+        await payrollPolicy.applyEmployees({
+            policyCode: selectedPolicy.value.code,
+            employeeCodes,
+            effectiveFrom: selectedPolicy.value.effectiveFrom,
+            effectiveTo: selectedPolicy.value.effectiveTo,
+        })
+
+        assignmentCounts.value = {
+            ...assignmentCounts.value,
+            [selectedPolicy.value.id]: employeeCodes.length,
+        }
+
+        assignmentMessage.value = `Assigned ${employeeCodes.length} employees to ${selectedPolicy.value.name}.`
+    } catch (err: any) {
+        error.value = err?.response?.data?.message ?? 'Unable to apply the payroll policy to the selected employees.'
+    }
 }
 
 function setLifecycle(tab: string) {

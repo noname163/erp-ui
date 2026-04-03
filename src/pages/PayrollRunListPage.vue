@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -10,6 +11,7 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { payrollRunService, type PayrollRunStatus } from '@/services/payroll-run.service'
+import { AppRoute } from '@/types'
 
 type StatusFilter = 'ALL' | PayrollRunStatus
 
@@ -22,6 +24,8 @@ type PayrollRunRow = {
   runBy: string
   updatedBy: string
 }
+
+const router = useRouter()
 
 const pageSize = 8
 
@@ -38,6 +42,7 @@ const runAtFrom = ref('')
 const runAtTo = ref('')
 const closeAtFrom = ref('')
 const closeAtTo = ref('')
+const selectedRunMonthYear = ref(getCurrentMonthYear())
 
 const appliedFilters = ref({
   search: '',
@@ -56,7 +61,7 @@ const headers: UiTableHeader[] = [
   { key: 'closeAt', label: 'Close At', thClass: 'min-w-[170px]' },
   { key: 'runBy', label: 'Run By', thClass: 'min-w-[180px]' },
   { key: 'updatedBy', label: 'Updated By', thClass: 'min-w-[180px]' },
-  { key: 'actions', label: 'Actions', align: 'right', thClass: 'min-w-[140px]' },
+  { key: 'actions', label: 'Actions', align: 'right', thClass: 'min-w-[220px]' },
 ]
 
 const statusOptions = [
@@ -120,6 +125,8 @@ const totalRuns = computed(() => filteredRows.value.length)
 const runningRuns = computed(() => filteredRows.value.filter((row) => row.status === 'RUNNING').length)
 const completedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'COMPLETED').length)
 const failedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'FAILED').length)
+const selectedRunDate = computed(() => toRunDateValue(selectedRunMonthYear.value))
+const canRunPayroll = computed(() => !loading.value && !runningPayroll.value && Boolean(selectedRunDate.value))
 
 watch(filteredRows, () => {
   if (page.value > totalPages.value) {
@@ -155,12 +162,18 @@ async function refreshPayrollRuns() {
 }
 
 async function runPayroll() {
+  if (!selectedRunDate.value) {
+    actionTone.value = 'error'
+    actionMessage.value = 'Select a payroll month before running payroll.'
+    return
+  }
+
   runningPayroll.value = true
   loadError.value = ''
   actionMessage.value = ''
 
   try {
-    const response = await payrollRunService.run()
+    const response = await payrollRunService.run(selectedRunDate.value)
     actionTone.value = 'success'
     actionMessage.value = resolveActionMessage(response?.data, 'Payroll run started successfully.')
     await loadPayrollRuns()
@@ -199,17 +212,13 @@ function setPage(next: number) {
   page.value = next
 }
 
-async function copyPayrunReference(row: PayrollRunRow) {
-  const reference = row.code || row.id
+function viewPayrollRunDetails(row: PayrollRunRow) {
+  const createdDate = toDateOnlyValue(row.runAt)
 
-  try {
-    await navigator.clipboard.writeText(reference)
-    actionTone.value = 'success'
-    actionMessage.value = `Copied payrun reference ${reference}.`
-  } catch {
-    actionTone.value = 'error'
-    actionMessage.value = 'Unable to copy the payrun reference.'
-  }
+  void router.push({
+    path: AppRoute.PAYROLL_RESULTS,
+    query: createdDate ? { createdDate } : undefined,
+  })
 }
 
 function statusVariant(currentStatus: PayrollRunStatus) {
@@ -345,6 +354,31 @@ function normalizeDateValue(value: unknown) {
   return null
 }
 
+function toDateOnlyValue(value: string | null) {
+  if (!value) return ''
+  if (/^\d{4}-\d{2}$/.test(value)) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (match?.[1]) return match[1]
+
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
+}
+
+function getCurrentMonthYear() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+function toRunDateValue(monthYear: string) {
+  const normalized = monthYear.trim()
+  if (!/^\d{4}-\d{2}$/.test(normalized)) return ''
+  return normalized
+}
+
 function normalizePerson(value: unknown, fallback = 'System') {
   if (typeof value === 'string' || typeof value === 'number') {
     return toDisplayString(value, fallback)
@@ -447,7 +481,15 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
               </div>
             </div>
 
-            <div class="flex flex-wrap gap-3">
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="w-full sm:w-[190px]">
+                <p class="pb-1.5 text-xs font-bold uppercase tracking-[0.2em] text-blue-100/90">Run Month</p>
+                <UiInput
+                  v-model="selectedRunMonthYear"
+                  type="month"
+                  :disabled="loading || runningPayroll"
+                />
+              </div>
               <UiButton
                 variant="outline"
                 leading-icon="refresh"
@@ -458,7 +500,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
               </UiButton>
               <UiButton
                 leading-icon="play_arrow"
-                :disabled="loading || runningPayroll"
+                :disabled="!canRunPayroll"
                 @click="runPayroll"
               >
                 {{ runningPayroll ? 'Running Payroll...' : 'Run Payroll' }}
@@ -672,15 +714,12 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 </button>
                 <button
                   type="button"
-                  class="rounded-lg border p-2 transition-colors"
-                  :class="runningPayroll
-                    ? 'cursor-not-allowed border-slate-200 text-slate-300 dark:border-slate-800'
-                    : 'border-primary/15 text-slate-500 hover:border-primary/40 hover:bg-primary/5 hover:text-primary'"
-                  :disabled="runningPayroll"
-                  title="Copy payrun reference"
-                  @click="copyPayrunReference(row)"
+                  class="inline-flex items-center gap-2 rounded-lg border border-primary/15 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  title="View payroll run details"
+                  @click="viewPayrollRunDetails(row)"
                 >
-                  <UiIcon name="content_copy" size="18" />
+                  <UiIcon name="visibility" size="18" />
+                  <span>View detail</span>
                 </button>
               </div>
             </template>
@@ -698,7 +737,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 </div>
                 <div class="flex flex-wrap justify-center gap-2">
                   <UiButton variant="outline" @click="resetFilters">Clear Filters</UiButton>
-                  <UiButton leading-icon="play_arrow" :disabled="runningPayroll" @click="runPayroll">Run Payroll</UiButton>
+                  <UiButton leading-icon="play_arrow" :disabled="!canRunPayroll" @click="runPayroll">Run Payroll</UiButton>
                 </div>
               </div>
             </template>

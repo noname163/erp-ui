@@ -14,16 +14,16 @@ export type PayrollRunListQuery = {
   status?: string;
 };
 
-export type PayrollRunExecuteRequest = Record<string, unknown> | undefined;
-
 export const payrollRunService = {
   async list(query: PayrollRunListQuery = {}) {
     const { data } = await http.get("/api/payroll-runs", { params: query });
     return data;
   },
 
-  async run(payload?: PayrollRunExecuteRequest) {
-    const response = await http.post("/api/payroll-runs", payload);
+  async run(runDate: string) {
+    const response = await http.post("/api/payroll-runs", null, {
+      params: { runDate },
+    });
     return {
       status: response.status,
       data: response.data,

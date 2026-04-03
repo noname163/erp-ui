@@ -27,6 +27,12 @@ export type PayrollPolicyListQuery = {
   effectiveTo?: string;
   unitCode?: string;
 };
+export type ApplyPayrollPolicyEmployeesRequest = {
+  policyCode: string;
+  employeeCodes: string[];
+  effectiveFrom: string;
+  effectiveTo: string;
+};
 export type SelectionOptionQuery = {
   type?: string;
   name?: string;
@@ -49,6 +55,16 @@ export const payrollPolicy = {
       { params },
     );
     return data;
+  },
+  async applyEmployees(req: ApplyPayrollPolicyEmployeesRequest) {
+    const response = await http.post(
+      "/api/v1/employee-payroll-policies/apply",
+      req,
+    );
+    return {
+      status: response.status,
+      data: response.data,
+    };
   },
   async systemUnitOptions(params?: SelectionOptionQuery) {
     const { data } = await http.get<SelectionOptionResponse[] | any>(
