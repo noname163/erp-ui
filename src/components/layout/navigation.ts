@@ -65,6 +65,18 @@ export const appNavItems: AppNavItem[] = [
     roles: ['HUMAN_RESOURCES'],
   },
   {
+    label: 'Payroll Runs',
+    icon: 'payments',
+    to: AppRoute.PAYROLL_RUNS,
+    roles: ['HUMAN_RESOURCES'],
+  },
+  {
+    label: 'Payroll Results',
+    icon: 'table_view',
+    to: AppRoute.PAYROLL_RESULTS,
+    roles: ['HUMAN_RESOURCES'],
+  },
+  {
     label: 'Salary Slips',
     icon: 'receipt_long',
     to: AppRoute.SALARY_SLIP_LIST,

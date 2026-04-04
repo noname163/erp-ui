@@ -6,6 +6,7 @@ import CalendarPageHeader from "@/components/calendar/CalendarPageHeader.vue";
 import UiButton from "@/components/ui/UiButton.vue";
 import UiCard from "@/components/ui/UiCard.vue";
 import UiCardBody from "@/components/ui/UiCardBody.vue";
+import UiDropdownMenu from "@/components/ui/UiDropdownMenu.vue";
 import UiIcon from "@/components/ui/UiIcon.vue";
 import UiInput from "@/components/ui/UiInput.vue";
 import UiSelect from "@/components/ui/UiSelect.vue";
@@ -31,6 +32,7 @@ const timeZoneFilter = ref("ALL");
 const showFilters = ref(false);
 const currentPage = ref(1);
 const pageSize = 5;
+const openActionCode = ref<string | null>(null);
 
 const rows = ref<CalendarRecord[]>([]);
 const totalElements = ref(0);
@@ -161,6 +163,34 @@ async function setPage(page: number) {
   currentPage.value = page;
   await loadCalendars();
 }
+
+function setCalendarActionMenu(code: string, open: boolean) {
+  if (open) {
+    openActionCode.value = code;
+    return;
+  }
+
+  if (openActionCode.value === code) {
+    openActionCode.value = null;
+  }
+}
+
+function viewCalendar(row: CalendarRecord) {
+  setCalendarActionMenu(row.code, false);
+  router.push({
+    path: AppRoute.CALENDAR_BUILDER,
+    query: {
+      code: row.code,
+      mode: "edit",
+      name: row.name,
+      effectiveFrom: row.effectiveFrom,
+      effectiveTo: row.effectiveTo ?? "",
+      region: row.region,
+      timezone: row.timezone,
+      note: row.note,
+    },
+  });
+}
 </script>
 
 <template>
@@ -260,7 +290,7 @@ async function setPage(page: number) {
         </UiCard>
       </div>
 
-      <UiCard>
+      <UiCard class="overflow-visible">
         <div class="p-0">
           <div v-if="error" class="px-4 py-4 text-sm text-amber-600 md:px-6">{{ error }}</div>
           <div v-if="loading" class="px-4 py-4 text-sm text-slate-500 md:px-6">Loading calendars...</div>
@@ -333,15 +363,47 @@ async function setPage(page: number) {
               </span>
             </template>
 
-            <template #cell-actions>
+            <template #cell-actions="{ row }">
               <div class="flex justify-end">
-                <button
-                  type="button"
-                  class="p-1 text-slate-400 transition-colors hover:text-primary"
-                  @click="router.push(AppRoute.CALENDAR_BUILDER)"
+                <UiDropdownMenu
+                  :model-value="openActionCode === row.code"
+                  panel-class="w-36"
+                  @update:model-value="(open) => setCalendarActionMenu(row.code, open)"
                 >
-                  <UiIcon name="more_vert" size="18px" />
-                </button>
+                  <template #trigger="{ toggle }">
+                    <button
+                      type="button"
+                      class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-primary/5 hover:text-primary"
+                      @click.stop="toggle"
+                    >
+                      <UiIcon name="more_vert" size="18px" />
+                    </button>
+                  </template>
+
+                  <template #default="{ close }">
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-primary/10 hover:text-primary dark:text-slate-200 dark:hover:bg-slate-900"
+                      @click.stop="
+                        close();
+                        viewCalendar(row);
+                      "
+                    >
+                      <UiIcon name="visibility" size="18px" />
+                      <span>View</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled
+                      class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 dark:text-slate-600"
+                      title="Delete endpoint is not configured"
+                    >
+                      <UiIcon name="delete" size="18px" />
+                      <span>Delete</span>
+                    </button>
+                  </template>
+                </UiDropdownMenu>
               </div>
             </template>
 

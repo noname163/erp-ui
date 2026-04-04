@@ -4,6 +4,7 @@ import { employeeService } from '@/services/employee.service'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
+import { userProfileService } from '@/services/user-profile.service'
 
 type EmployeeOption = {
   id: string
@@ -22,14 +23,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'confirm', selectedIds: string[]): void
+  (e: 'confirm', selectedCodes: string[]): void
 }>()
 
 const loading = ref(false)
 const error = ref('')
 const search = ref('')
 const rows = ref<EmployeeOption[]>([])
-const selectedIds = ref<string[]>([])
+const selectedCodes = ref<string[]>([])
 const loaded = ref(false)
 
 const seedRows: EmployeeOption[] = [
@@ -128,7 +129,7 @@ async function loadEmployees() {
   error.value = ''
 
   try {
-    const response = await employeeService.list({ page: 0, size: 100, sortDir: 'ASC' })
+    const response = await userProfileService.options({ page: 0, size: 100, sortDir: 'ASC' })
     const data = (response?.content ?? response?.data ?? response?.employees ?? []) as unknown[]
     rows.value = Array.isArray(data) && data.length > 0 ? data.map(normalizeEmployee) : [...seedRows]
   } catch (err: any) {
@@ -137,8 +138,8 @@ async function loadEmployees() {
   } finally {
     loading.value = false
     loaded.value = true
-    if (selectedIds.value.length === 0) {
-      selectedIds.value = rows.value.slice(0, 2).map((row) => row.id)
+    if (selectedCodes.value.length === 0) {
+      selectedCodes.value = rows.value.slice(0, 2).map((row) => row.code)
     }
   }
 }
@@ -150,8 +151,8 @@ watch(
     search.value = ''
     if (!loaded.value) {
       void loadEmployees()
-    } else if (selectedIds.value.length === 0) {
-      selectedIds.value = rows.value.slice(0, 2).map((row) => row.id)
+    } else if (selectedCodes.value.length === 0) {
+      selectedCodes.value = rows.value.slice(0, 2).map((row) => row.code)
     }
   },
 )
@@ -165,30 +166,30 @@ const filteredRows = computed(() => {
   )
 })
 
-const selectedCount = computed(() => selectedIds.value.length)
+const selectedCount = computed(() => selectedCodes.value.length)
 const allVisibleSelected = computed(
-  () => filteredRows.value.length > 0 && filteredRows.value.every((row) => selectedIds.value.includes(row.id)),
+  () => filteredRows.value.length > 0 && filteredRows.value.every((row) => selectedCodes.value.includes(row.code)),
 )
 
-function toggleEmployee(id: string, checked: boolean) {
+function toggleEmployee(code: string, checked: boolean) {
   if (checked) {
-    if (!selectedIds.value.includes(id)) selectedIds.value = [...selectedIds.value, id]
+    if (!selectedCodes.value.includes(code)) selectedCodes.value = [...selectedCodes.value, code]
     return
   }
 
-  selectedIds.value = selectedIds.value.filter((value) => value !== id)
+  selectedCodes.value = selectedCodes.value.filter((value) => value !== code)
 }
 
 function toggleAllVisible(checked: boolean) {
   if (!checked) {
-    const visibleIds = new Set(filteredRows.value.map((row) => row.id))
-    selectedIds.value = selectedIds.value.filter((id) => !visibleIds.has(id))
+    const visibleCodes = new Set(filteredRows.value.map((row) => row.code))
+    selectedCodes.value = selectedCodes.value.filter((code) => !visibleCodes.has(code))
     return
   }
 
-  const next = new Set(selectedIds.value)
-  filteredRows.value.forEach((row) => next.add(row.id))
-  selectedIds.value = Array.from(next)
+  const next = new Set(selectedCodes.value)
+  filteredRows.value.forEach((row) => next.add(row.code))
+  selectedCodes.value = Array.from(next)
 }
 
 function checkboxValue(event: Event) {
@@ -197,7 +198,7 @@ function checkboxValue(event: Event) {
 }
 
 function confirmSelection() {
-  emit('confirm', selectedIds.value)
+  emit('confirm', selectedCodes.value)
   close()
 }
 </script>
@@ -278,8 +279,8 @@ function confirmSelection() {
                   <input
                     type="checkbox"
                     class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/20"
-                    :checked="selectedIds.includes(row.id)"
-                    @change="toggleEmployee(row.id, checkboxValue($event))"
+                    :checked="selectedCodes.includes(row.code)"
+                    @change="toggleEmployee(row.code, checkboxValue($event))"
                   />
                 </td>
                 <td class="px-4 py-4">

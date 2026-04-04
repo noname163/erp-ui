@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
@@ -12,10 +12,11 @@ import UiInlineSelect from '@/components/ui/UiInlineSelect.vue'
 import { employeeSalaryService, type EmployeeSalarySlipDetailRequest, type EmployeeSalarySlipRequest } from '@/services/employee-salary.service'
 import { salaryService, type SelectionOptionResponse } from '@/services/salary.service'
 import { userProfileService } from '@/services/user-profile.service'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const loadingOptions = ref(false)
 const loadingTemplateDetails = ref(false)
@@ -123,6 +124,9 @@ function createEmptyDetail(): SalaryDetailRow {
 }
 
 const totalAmount = computed(() => sumDecimalStrings(details.value.map(d => d.amount)))
+const routeEmployeeCode = computed(() => queryString(route.query.employeeCode))
+const routePeriod = computed(() => queryString(route.query.period))
+const hasRoutePrefill = computed(() => Boolean(routeEmployeeCode.value || routePeriod.value))
 
 const compiledPayload = computed<EmployeeSalarySlipRequest>(() => ({
     ...master.value,
@@ -311,10 +315,63 @@ async function loadDraft() {
     }
 }
 
+function queryString(value: unknown) {
+    if (typeof value === 'string') return value.trim()
+    if (Array.isArray(value) && typeof value[0] === 'string') return value[0].trim()
+    return ''
+}
+
+function resolvePeriodRange(value: string) {
+    const normalized = value.trim()
+    if (!normalized) return null
+
+    const monthMatch = normalized.match(/^(\d{4})[-/](\d{2})$/)
+    if (monthMatch) {
+        const year = Number(monthMatch[1])
+        const monthIndex = Number(monthMatch[2]) - 1
+        const start = new Date(Date.UTC(year, monthIndex, 1))
+        const end = new Date(Date.UTC(year, monthIndex + 1, 0))
+        return {
+            start: start.toISOString().slice(0, 10),
+            end: end.toISOString().slice(0, 10),
+        }
+    }
+
+    const rangeMatch = normalized.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/)
+    if (rangeMatch) {
+        return {
+            start: rangeMatch[1],
+            end: rangeMatch[2],
+        }
+    }
+
+    return null
+}
+
+function applyRoutePrefill() {
+    if (routeEmployeeCode.value) {
+        master.value.userProfileCode = routeEmployeeCode.value
+    }
+
+    const range = resolvePeriodRange(routePeriod.value)
+    if (range) {
+        master.value.effectiveFrom = range.start
+        master.value.effectiveTo = range.end
+    }
+}
+
 onMounted(async () => {
     await loadSelectionOptions()
     await loadDraft()
+    applyRoutePrefill()
 })
+
+watch(
+    () => route.fullPath,
+    () => {
+        applyRoutePrefill()
+    },
+)
 
 const tableHeaders: UiTableHeader[] = [
     { key: 'salaryCode', label: 'Salary Code', thClass: 'w-1/5' },
@@ -348,6 +405,12 @@ const tableHeaders: UiTableHeader[] = [
             <div v-if="error" class="mb-4 text-sm text-red-500">{{ error }}</div>
             <div v-if="message" class="mb-4 text-sm text-green-600">{{ message }}</div>
             <div v-if="loadingOptions" class="mb-4 text-sm text-slate-500">Loading options...</div>
+            <div v-if="hasRoutePrefill" class="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                Viewing payroll result detail with
+                <span v-if="routeEmployeeCode" class="font-semibold"> employee {{ routeEmployeeCode }}</span>
+                <span v-if="routeEmployeeCode && routePeriod"> and </span>
+                <span v-if="routePeriod" class="font-semibold">period {{ routePeriod }}</span>
+            </div>
 
             <div class="ui-card mb-8 overflow-visible">
                 <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center gap-2">

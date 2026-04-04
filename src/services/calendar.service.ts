@@ -1,7 +1,7 @@
 import { http } from "./http";
 
 export type CalendarDayType =
-  | "WORKING_DAY"
+  | "NORMAL"
   | "WEEKEND"
   | "HOLIDAY"
   | "WEEKEND_WORK"
@@ -29,6 +29,12 @@ export interface CalendarAssignment {
   date: string;
   type: CalendarDayType;
   label?: string;
+}
+
+export interface ResolvedCalendarDay {
+  type: CalendarDayType | null;
+  label: string;
+  explicit: boolean;
 }
 
 export interface CalendarDraft {
@@ -139,26 +145,11 @@ const draftSeed: CalendarDraft = {
     "Regional operating calendar for warehouse, support, and finance teams. Use date assignments to mark holidays, shutdowns, and weekend coverage.",
 };
 
-const assignmentSeed: CalendarAssignment[] = [
-  { date: "2026-01-01", type: "HOLIDAY", label: "New Year's Day" },
-  { date: "2026-01-02", type: "COMPANY_DAY_OFF", label: "Bridge Leave" },
-  { date: "2026-02-16", type: "COMPANY_DAY_OFF", label: "System Upgrade" },
-  { date: "2026-03-20", type: "HOLIDAY", label: "Team Summit" },
-  { date: "2026-04-13", type: "HOLIDAY", label: "Songkran Festival" },
-  { date: "2026-04-14", type: "HOLIDAY", label: "Songkran Festival" },
-  { date: "2026-04-18", type: "WEEKEND_WORK", label: "Quarter-End Support" },
-  { date: "2026-04-24", type: "COMPANY_DAY_OFF", label: "Bridge Day" },
-  { date: "2026-05-01", type: "HOLIDAY", label: "Labor Day" },
-  { date: "2026-05-16", type: "WEEKEND_WORK", label: "Inventory Count" },
-  { date: "2026-06-12", type: "HOLIDAY", label: "Founders Day" },
-  { date: "2026-08-12", type: "HOLIDAY", label: "Regional Holiday" },
-  { date: "2026-10-23", type: "HOLIDAY", label: "Public Holiday" },
-  { date: "2026-12-31", type: "COMPANY_DAY_OFF", label: "Year-End Shutdown" },
-];
+const assignmentSeed: CalendarAssignment[] = [];
 
 export const calendarTypeOptions: CalendarTypeOption[] = [
   {
-    value: "WORKING_DAY",
+    value: "NORMAL",
     label: "Working date",
     description: "Standard operation hours",
     icon: "check_circle",
@@ -216,8 +207,24 @@ export const calendarService = {
     );
     return data;
   },
+  async listDates(code: string) {
+    const { data } = await http.get<CompanyCalendarDateResponse[] | any>(
+      `/api/company-calendars/${encodeURIComponent(code)}/dates`,
+    );
+    return data;
+  },
   async create(req: CompanyCalendarRequest) {
     const response = await http.post<CompanyCalendarResponse>("/api/company-calendars", req);
+    return {
+      status: response.status,
+      data: response.data,
+    };
+  },
+  async update(code: string, req: CompanyCalendarRequest) {
+    const response = await http.put<CompanyCalendarResponse>(
+      `/api/company-calendars/${encodeURIComponent(code)}`,
+      req,
+    );
     return {
       status: response.status,
       data: response.data,
@@ -238,7 +245,7 @@ export function createAssignmentMap(assignments: CalendarAssignment[]) {
 export function resolveCalendarDay(
   date: string,
   assignmentMap: Map<string, CalendarAssignment>,
-) {
+): ResolvedCalendarDay {
   const assigned = assignmentMap.get(date);
   if (assigned) {
     return {
@@ -248,16 +255,8 @@ export function resolveCalendarDay(
     };
   }
 
-  if (isWeekend(date)) {
-    return {
-      type: "WEEKEND" as const,
-      label: "",
-      explicit: false,
-    };
-  }
-
   return {
-    type: "WORKING_DAY" as const,
+    type: null,
     label: "",
     explicit: false,
   };
@@ -268,7 +267,7 @@ export function summarizeMonths(
   assignmentMap: Map<string, CalendarAssignment>,
 ) {
   const totals: Record<CalendarDayType, number> = {
-    WORKING_DAY: 0,
+    NORMAL: 0,
     WEEKEND: 0,
     HOLIDAY: 0,
     WEEKEND_WORK: 0,
@@ -277,7 +276,8 @@ export function summarizeMonths(
 
   for (const month of months) {
     for (const date of getMonthDateKeys(month)) {
-      totals[resolveCalendarDay(date, assignmentMap).type] += 1;
+      const type = resolveCalendarDay(date, assignmentMap).type;
+      if (type) totals[type] += 1;
     }
   }
 
@@ -371,7 +371,7 @@ function toDateKey(date: Date) {
 }
 
 export function defaultCalendarDateNote(type: CalendarDayType): string {
-  if (type === "WORKING_DAY") return "Working day";
+  if (type === "NORMAL") return "Working day";
   if (type === "HOLIDAY") return "Holiday";
   if (type === "WEEKEND_WORK") return "Weekend work";
   if (type === "COMPANY_DAY_OFF") return "Company day-off";
