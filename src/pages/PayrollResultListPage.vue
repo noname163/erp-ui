@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -11,9 +11,13 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { payrollResultService, type PayrollResultSourceType } from '@/services/payroll-result.service'
+import { AppRoute } from '@/types'
 
 type PayrollResultRow = {
   id: string
+  payrollRunCode: string
+  period: string
+  createdAt: string
   createdDate: string
   salaryName: string
   employeeCode: string
@@ -30,8 +34,11 @@ type PayrollResultRow = {
 }
 
 const route = useRoute()
+const router = useRouter()
 
 const headers: UiTableHeader[] = [
+  { key: 'period', label: 'Period', thClass: 'min-w-[140px]' },
+  { key: 'createdAt', label: 'Created At', thClass: 'min-w-[190px]' },
   { key: 'salaryName', label: 'Salary Name', thClass: 'min-w-[160px]' },
   { key: 'employee', label: 'Employee', thClass: 'min-w-[220px]' },
   { key: 'amount', label: 'Expected vs Actual (Amt)', align: 'right', thClass: 'min-w-[220px]' },
@@ -41,11 +48,13 @@ const headers: UiTableHeader[] = [
   { key: 'sourceType', label: 'Source', thClass: 'min-w-[130px]' },
   { key: 'retro', label: 'Retro', thClass: 'min-w-[100px]' },
   { key: 'retroReason', label: 'Retro Reason', thClass: 'min-w-[220px]' },
+  { key: 'actions', label: 'Actions', align: 'right', thClass: 'min-w-[110px]' },
 ]
 
 const createdDate = ref('')
 const sourceType = ref<'ALL' | PayrollResultSourceType>('ALL')
 const employeeQuery = ref('')
+const activePayrollRunCode = ref('')
 const linesPerPage = ref('10')
 const page = ref(1)
 const loading = ref(false)
@@ -78,7 +87,13 @@ const filteredRows = computed(() => {
   const normalizedEmployeeQuery = appliedFilters.value.employeeQuery.trim().toLowerCase()
 
   return rows.value.filter((row) => {
-    if (appliedFilters.value.createdDate && row.createdDate !== appliedFilters.value.createdDate) {
+    const effectiveCreatedDate = row.createdDate || (activePayrollRunCode.value ? createdDate.value : '')
+
+    if (activePayrollRunCode.value && row.payrollRunCode && row.payrollRunCode !== activePayrollRunCode.value) {
+      return false
+    }
+
+    if (appliedFilters.value.createdDate && effectiveCreatedDate !== appliedFilters.value.createdDate) {
       return false
     }
 
@@ -138,36 +153,43 @@ watch(linesPerPage, () => {
 })
 
 watch(
-  () => route.query.createdDate,
-  (createdDateQuery) => {
+  () => [route.query.createdDate, route.query.payrollRunCode],
+  ([createdDateQuery, payrollRunCodeQuery]) => {
     const createdDateFromRoute = normalizeDateOnly(queryString(createdDateQuery))
+    const payrollRunCodeFromRoute = queryString(payrollRunCodeQuery)
     createdDate.value = createdDateFromRoute
+    activePayrollRunCode.value = payrollRunCodeFromRoute
     appliedFilters.value = {
       ...appliedFilters.value,
       createdDate: createdDateFromRoute,
     }
     page.value = 1
+
+    void loadRows()
   },
   { immediate: true },
 )
-
-onMounted(() => {
-  void loadRows()
-})
 
 async function loadRows() {
   loading.value = true
   error.value = ''
 
   try {
-    const response = await payrollResultService.list()
+    const query = {
+      ...(activePayrollRunCode.value ? { payrollRunCode: activePayrollRunCode.value } : {}),
+      ...(createdDate.value ? { createdDate: createdDate.value } : {}),
+    }
+
+    const response = await payrollResultService.list(
+      Object.keys(query).length > 0 ? query : undefined,
+    )
     const items = normalizeCollection(response)
 
     rows.value = items
       .map((item, index) => normalizeRow(item, index))
       .sort((left, right) => {
-        const rightTs = toTimestamp(right.createdDate) ?? 0
-        const leftTs = toTimestamp(left.createdDate) ?? 0
+        const rightTs = toTimestamp(right.createdAt || right.createdDate) ?? 0
+        const leftTs = toTimestamp(left.createdAt || left.createdDate) ?? 0
         return rightTs - leftTs
       })
   } catch (err: any) {
@@ -203,6 +225,21 @@ function setPage(nextPage: number) {
   page.value = nextPage
 }
 
+function viewPayrollResultDetails(row: PayrollResultRow) {
+  const employeeCode = row.employeeCode !== '-' ? row.employeeCode.trim() : ''
+  const period = row.period !== '-' ? row.period.trim() : ''
+
+  if (!employeeCode && !period) return
+
+  void router.push({
+    path: AppRoute.SALARY_SLIP,
+    query: {
+      ...(employeeCode ? { employeeCode } : {}),
+      ...(period ? { period } : {}),
+    },
+  })
+}
+
 function sourceVariant(value: PayrollResultSourceType) {
   if (value === 'FINALIZED') return 'success' as const
   if (value === 'ADJUSTMENT') return 'warning' as const
@@ -233,6 +270,22 @@ function formatAmount(amount: number, currency: string) {
 
 function formatQuantity(value: number) {
   return value.toFixed(2)
+}
+
+function formatDateTime(value: string) {
+  if (!value) return '-'
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(parsed)
 }
 
 function formatSummaryAmount(amount: number) {
@@ -289,13 +342,45 @@ function normalizeCollection(payload: unknown): Record<string, unknown>[] {
 
 function normalizeRow(item: Record<string, unknown>, index: number): PayrollResultRow {
   const employee = asRecord(firstDefined(item.employee, item.userProfile, item.employeeInfo))
+  const payrollRun = asRecord(firstDefined(item.payrollRun, item.run))
+  const normalizedCreatedAt = normalizeDateTimeValue(
+    firstDefined(
+      item.createdAt,
+      payrollRun?.createdAt,
+      item.updatedAt,
+      item.runAt,
+      payrollRun?.runAt,
+      payrollRun?.updatedAt,
+    ),
+  )
+  const normalizedCreatedDate = normalizeDateOnly(
+    firstDefined(
+      normalizedCreatedAt,
+      item.createdDate,
+      item.createdAt,
+      item.updatedAt,
+      item.runAt,
+      payrollRun?.runAt,
+      payrollRun?.createdAt,
+      payrollRun?.updatedAt,
+    ),
+  ) || (activePayrollRunCode.value ? createdDate.value : '')
 
   return {
     id: toDisplayString(
       firstDefined(item.id, item.code, item.payrollResultCode, item.resultCode),
       `PAYROLL-RESULT-${index + 1}`,
     ),
-    createdDate: normalizeDateOnly(firstDefined(item.createdDate, item.createdAt, item.updatedAt, item.runAt)),
+    payrollRunCode: toDisplayString(
+      firstDefined(item.payrollRunCode, item.runCode, payrollRun?.code, payrollRun?.payrollRunCode),
+      '',
+    ),
+    period: toDisplayString(
+      firstDefined(item.period, item.payrollPeriod, item.runPeriod, payrollRun?.period, payrollRun?.runPeriod),
+      '-',
+    ),
+    createdAt: normalizedCreatedAt,
+    createdDate: normalizedCreatedDate,
     salaryName: toDisplayString(
       firstDefined(item.salaryName, item.name, item.salaryCode, item.salaryComponentName),
       'Payroll Item',
@@ -360,6 +445,24 @@ function normalizeDateOnly(value: unknown) {
 
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10)
+  }
+
+  return ''
+}
+
+function normalizeDateTimeValue(value: unknown) {
+  if (typeof value === 'string') {
+    const normalized = value.trim()
+    return normalized || ''
+  }
+
+  if (typeof value === 'number') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString()
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString()
   }
 
   return ''
@@ -457,6 +560,14 @@ function toTimestamp(value: string) {
         <UiButton variant="outline" leading-icon="refresh" :disabled="loading" @click="refresh">Refresh</UiButton>
       </div>
 
+      <div
+        v-if="activePayrollRunCode"
+        class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+      >
+        Showing results for payroll run
+        <span class="font-semibold">{{ activePayrollRunCode }}</span>
+      </div>
+
       <UiCard>
         <UiCardBody>
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
@@ -501,12 +612,20 @@ function toTimestamp(value: string) {
             :headers="headers"
             :rows="pagedRows"
             row-key="id"
-            table-class="min-w-[1220px]"
+            table-class="min-w-[1640px]"
             row-class="hover:bg-primary/5 transition-colors"
             th-base-class="px-4 md:px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-[0.2em]"
             td-base-class="px-4 md:px-6 py-4 text-sm"
             empty-text="No payroll results match the current filters."
           >
+            <template #cell-period="{ row }">
+              <span class="font-medium text-slate-900 dark:text-white">{{ row.period }}</span>
+            </template>
+
+            <template #cell-createdAt="{ row }">
+              <span class="text-slate-600 dark:text-slate-300">{{ formatDateTime(row.createdAt) }}</span>
+            </template>
+
             <template #cell-salaryName="{ row }">
               <span class="font-semibold text-slate-900 dark:text-white">{{ row.salaryName }}</span>
             </template>
@@ -573,6 +692,19 @@ function toTimestamp(value: string) {
               >
                 {{ row.retroReason ?? '-' }}
               </p>
+            </template>
+
+            <template #cell-actions="{ row }">
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  class="rounded-lg border border-primary/15 p-2 text-slate-500 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  title="View detail"
+                  @click="viewPayrollResultDetails(row)"
+                >
+                  <UiIcon name="visibility" size="18" />
+                </button>
+              </div>
             </template>
           </UiTable>
         </div>

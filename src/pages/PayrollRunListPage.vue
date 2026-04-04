@@ -122,8 +122,8 @@ const pageButtons = computed<(number | '...')[]>(() => {
 })
 
 const totalRuns = computed(() => filteredRows.value.length)
-const runningRuns = computed(() => filteredRows.value.filter((row) => row.status === 'RUNNING').length)
-const completedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'COMPLETED').length)
+const runningRuns = computed(() => filteredRows.value.filter((row) => row.status === 'OPEN').length)
+const completedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'CLOSED').length)
 const failedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'FAILED').length)
 const selectedRunDate = computed(() => toRunDateValue(selectedRunMonthYear.value))
 const canRunPayroll = computed(() => !loading.value && !runningPayroll.value && Boolean(selectedRunDate.value))
@@ -144,6 +144,7 @@ async function loadPayrollRuns() {
 
   try {
     const response = await payrollRunService.list()
+    console.log("Response ", response)
     const items = normalizeCollection(response)
     rows.value = items
       .map((item, index) => normalizeRow(item, index))
@@ -213,31 +214,37 @@ function setPage(next: number) {
 }
 
 function viewPayrollRunDetails(row: PayrollRunRow) {
+  const payrollRunCode = row.code.trim() || row.id.trim()
   const createdDate = toDateOnlyValue(row.runAt)
 
   void router.push({
     path: AppRoute.PAYROLL_RESULTS,
-    query: createdDate ? { createdDate } : undefined,
+    query: payrollRunCode || createdDate
+      ? {
+          ...(payrollRunCode ? { payrollRunCode } : {}),
+          ...(createdDate ? { createdDate } : {}),
+        }
+      : undefined,
   })
 }
 
 function statusVariant(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'COMPLETED') return 'success' as const
+  if (currentStatus === 'CLOSED') return 'success' as const
   if (currentStatus === 'FAILED') return 'error' as const
   return 'info' as const
 }
 
 function statusIcon(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'COMPLETED') return 'check_circle'
+  if (currentStatus === 'CLOSED') return 'check_circle'
   if (currentStatus === 'FAILED') return 'error'
   return 'autorenew'
 }
 
 function statusLabel(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'RUNNING') return 'Running'
-  if (currentStatus === 'COMPLETED') return 'Completed'
+  if (currentStatus === 'OPEN') return 'Running'
+  if (currentStatus === 'CALCULATED') return 'Calculated'
   if (currentStatus === 'FAILED') return 'Failed'
-  return 'Draft'
+  return 'OPEN'
 }
 
 function formatDate(value: string | null) {
@@ -266,8 +273,8 @@ function formatTime(value: string | null) {
 
 function closeAtLabel(row: PayrollRunRow) {
   if (row.closeAt) return formatDate(row.closeAt)
-  if (row.status === 'RUNNING') return 'In progress...'
-  if (row.status === 'DRAFT') return 'Not closed'
+  if (row.status === 'OPEN') return 'In progress...'
+  if (row.status === 'CALCULATED') return 'Not closed'
   return 'Unavailable'
 }
 
@@ -330,10 +337,10 @@ function normalizeStatus(value: unknown): PayrollRunStatus {
     .replaceAll('-', '_')
     .replaceAll(' ', '_')
 
-  if (token.includes('RUN')) return 'RUNNING'
-  if (token.includes('COMPLETE') || token.includes('DONE') || token.includes('SUCCESS')) return 'COMPLETED'
+  if (token.includes('CALCULATED')) return 'CALCULATED'
+  if (token.includes('OPEN') || token.includes('DONE') || token.includes('SUCCESS')) return 'OPEN'
   if (token.includes('FAIL') || token.includes('ERROR')) return 'FAILED'
-  return 'DRAFT'
+  return 'OPEN'
 }
 
 function normalizeDateValue(value: unknown) {

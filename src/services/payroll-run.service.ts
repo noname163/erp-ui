@@ -1,10 +1,6 @@
 import { http } from "./http";
 
-export type PayrollRunStatus =
-  | "DRAFT"
-  | "RUNNING"
-  | "COMPLETED"
-  | "FAILED";
+export type PayrollRunStatus = "OPEN" | "CALCULATED" | "CLOSED" | "FAILED";
 
 export type PayrollRunListQuery = {
   page?: number;

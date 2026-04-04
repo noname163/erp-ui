@@ -20,7 +20,6 @@ const items = computed<NavItem[]>(() => [
     { label: 'Salary Components', icon: 'tune', to: AppRoute.PAYROLL_COMPONENTS, roles: ['HUMAN_RESOURCES'] },
     { label: 'Salary Templates', icon: 'description', to: AppRoute.PAYROLL_TEMPLATES, roles: ['HUMAN_RESOURCES'] },
     { label: 'Payroll Runs', icon: 'payments', to: AppRoute.PAYROLL_RUNS, roles: ['HUMAN_RESOURCES'] },
-    { label: 'Payroll Results', icon: 'table_view', to: AppRoute.PAYROLL_RESULTS, roles: ['HUMAN_RESOURCES'] },
     { label: 'Salary Slip', icon: 'receipt_long', to: AppRoute.SALARY_SLIP_LIST, roles: ['HUMAN_RESOURCES', 'COMPANY_MANAGER', 'EMPLOYEE'] },
     { label: 'Authentication', icon: 'verified_user', to: AppRoute.RESET_PASSWORD },
     { label: 'Working Logs', icon: 'history', to: AppRoute.LOG_WORK_LIST, roles: ['EMPLOYEE', 'HUMAN_RESOURCES'] },
