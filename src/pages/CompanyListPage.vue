@@ -5,10 +5,12 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { companyService } from '@/services/company.service'
+import { useI18n } from '@/i18n'
 import type { Company } from '@/types'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
+const { t } = useI18n()
 const rows = ref<Company[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -21,7 +23,7 @@ async function load() {
     const data = (res?.content ?? res?.data ?? res?.companies ?? []) as Company[]
     rows.value = Array.isArray(data) ? data : []
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Failed to load companies'
+    error.value = e?.response?.data?.message ?? t('companies.list.loadFailed')
   } finally {
     loading.value = false
   }
@@ -31,35 +33,35 @@ onMounted(load)
 
 const empty = computed(() => !loading.value && rows.value.length === 0)
 
-const headers: UiTableHeader[] = [
-  { key: 'code', label: 'Code' },
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'industry', label: 'Industry' },
-  { key: 'phoneNumber', label: 'Phone' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'code', label: t('common.field.code') },
+  { key: 'name', label: t('common.field.name') },
+  { key: 'email', label: t('common.field.email') },
+  { key: 'industry', label: t('common.field.industry') },
+  { key: 'phoneNumber', label: t('common.field.phone') },
+])
 </script>
 
 <template>
   <AppLayout>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Companies</h1>
+        <h1 class="text-2xl font-bold">{{ t('companies.list.title') }}</h1>
         <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">/api/companies</p>
       </div>
-      <UiButton variant="primary" @click="router.push(AppRoute.CREATE_COMPANY)">Create new</UiButton>
+      <UiButton variant="primary" @click="router.push(AppRoute.CREATE_COMPANY)">{{ t('companies.list.createNew') }}</UiButton>
     </div>
 
     <div class="ui-card">
       <div class="p-4 md:p-6">
         <div v-if="error" class="text-sm text-red-500 mb-4">{{ error }}</div>
-        <div v-if="loading" class="text-sm text-slate-500">Loading...</div>
+        <div v-if="loading" class="text-sm text-slate-500">{{ t('common.state.loading') }}</div>
 
         <div v-else-if="empty" class="text-center py-14">
-          <p class="font-semibold">No companies</p>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Create your first company.</p>
+          <p class="font-semibold">{{ t('companies.list.emptyTitle') }}</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ t('companies.list.emptyDescription') }}</p>
           <div class="mt-4 flex justify-center">
-            <UiButton variant="primary" @click="router.push(AppRoute.CREATE_COMPANY)">Create company</UiButton>
+            <UiButton variant="primary" @click="router.push(AppRoute.CREATE_COMPANY)">{{ t('companies.list.createCompany') }}</UiButton>
           </div>
         </div>
 

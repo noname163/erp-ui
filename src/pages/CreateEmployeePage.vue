@@ -9,9 +9,11 @@ import UiIcon from '@/components/ui/UiIcon.vue'
 import { employeeService, type CreateEmployeeRequest } from '@/services/employee.service'
 import { departmentService } from '@/services/department.service'
 import { roleService } from '@/services/role.service'
+import { useI18n } from '@/i18n'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
+const { t } = useI18n()
 
 const loading = ref(false)
 const loadingDepartments = ref(false)
@@ -39,14 +41,14 @@ const canSubmit = computed(() => !loading.value && !loadingDepartments.value && 
 
 function validate() {
     const nextErrors: Partial<Record<keyof CreateEmployeeRequest, string>> = {}
-    if (!form.value.firstName.trim()) nextErrors.firstName = 'First name is required'
-    if (!form.value.lastName.trim()) nextErrors.lastName = 'Last name is required'
-    if (!form.value.email.trim()) nextErrors.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) nextErrors.email = 'Invalid email'
-    if (!form.value.phone.trim()) nextErrors.phone = 'Phone is required'
-    if (!form.value.departmentCode) nextErrors.departmentCode = 'Department is required'
-    if (!form.value.roleCode) nextErrors.roleCode = 'Role is required'
-    if (!form.value.gender) nextErrors.gender = 'Gender is required'
+    if (!form.value.firstName.trim()) nextErrors.firstName = t('employees.create.validation.firstNameRequired')
+    if (!form.value.lastName.trim()) nextErrors.lastName = t('employees.create.validation.lastNameRequired')
+    if (!form.value.email.trim()) nextErrors.email = t('employees.create.validation.emailRequired')
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email.trim())) nextErrors.email = t('employees.create.validation.invalidEmail')
+    if (!form.value.phone.trim()) nextErrors.phone = t('employees.create.validation.phoneRequired')
+    if (!form.value.departmentCode) nextErrors.departmentCode = t('employees.create.validation.departmentRequired')
+    if (!form.value.roleCode) nextErrors.roleCode = t('employees.create.validation.roleRequired')
+    if (!form.value.gender) nextErrors.gender = t('employees.create.validation.genderRequired')
 
     fieldErrors.value = nextErrors
     return Object.keys(nextErrors).length === 0
@@ -56,12 +58,12 @@ async function loadDepartments() {
     loadingDepartments.value = true
     try {
         const res = await departmentService.options()
-        const items = (res ?? []) as Array<{ code?: string; name?: string }>
-        departmentOptions.value = items
+    const items = (res ?? []) as Array<{ code?: string; name?: string }>
+    departmentOptions.value = items
             .filter((d) => d?.code && d?.name)
             .map((d) => ({ value: d.code as string, label: d.name as string }))
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Load departments failed'
+        error.value = e?.response?.data?.message ?? t('employees.create.loadDepartmentsFailed')
     } finally {
         loadingDepartments.value = false
     }
@@ -80,7 +82,7 @@ async function loadRoles() {
             form.value.roleCode = roleOptions.value[0]?.value ?? ''
         }
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Load roles failed'
+        error.value = e?.response?.data?.message ?? t('employees.create.loadRolesFailed')
     } finally {
         loadingRoles.value = false
     }
@@ -115,10 +117,10 @@ async function submit() {
             email: form.value.email.trim(),
             phone: form.value.phone.trim(),
         })
-        success.value = 'Employee created'
+        success.value = t('employees.create.successCreated')
         router.push(AppRoute.EMPLOYEES)
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Create employee failed'
+        error.value = e?.response?.data?.message ?? t('employees.create.createFailed')
     } finally {
         loading.value = false
     }
@@ -135,22 +137,22 @@ onMounted(() => {
         <div class="w-full max-w-5xl mx-auto">
             <div class="flex items-center gap-2 mb-6">
                 <button class="text-slate-500 text-sm font-medium hover:text-primary"
-                    @click="router.push(AppRoute.EMPLOYEES)">Employees</button>
+                    @click="router.push(AppRoute.EMPLOYEES)">{{ t('employees.create.breadcrumb') }}</button>
                 <UiIcon name="chevron_right" size="16px" class="text-slate-400" />
-                <span class="text-slate-900 dark:text-white text-sm font-semibold">Create New Employee</span>
+                <span class="text-slate-900 dark:text-white text-sm font-semibold">{{ t('employees.create.title') }}</span>
             </div>
 
             <div class="flex items-start justify-between gap-4 mb-6">
                 <div>
-                    <h1 class="text-3xl font-bold">Create New Employee</h1>
+                    <h1 class="text-3xl font-bold">{{ t('employees.create.title') }}</h1>
                     <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">POST /api/employees</p>
                 </div>
                 <div class="flex gap-3">
-                    <UiButton variant="outline" :disabled="loading" @click="router.push(AppRoute.EMPLOYEES)">Cancel
+                    <UiButton variant="outline" :disabled="loading" @click="router.push(AppRoute.EMPLOYEES)">{{ t('common.action.cancel') }}
                     </UiButton>
                     <UiButton variant="primary" :disabled="!canSubmit" @click="submit">
-                        <span v-if="loading">Saving...</span>
-                        <span v-else>Save Employee</span>
+                        <span v-if="loading">{{ t('common.state.saving') }}</span>
+                        <span v-else>{{ t('employees.create.saveEmployee') }}</span>
                     </UiButton>
                 </div>
             </div>
@@ -162,77 +164,77 @@ onMounted(() => {
 
                     <section class="space-y-5">
                         <div>
-                            <h2 class="text-lg font-bold">Personal Information</h2>
+                            <h2 class="text-lg font-bold">{{ t('employees.create.sections.personalInformation') }}</h2>
                             <div class="h-px bg-primary/10 mt-4" />
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <UiInput v-model="form.firstName" label="First Name" required placeholder="e.g. John"
+                            <UiInput v-model="form.firstName" :label="t('common.field.firstName')" required :placeholder="t('employees.create.fields.firstName.placeholder')"
                                 :error="fieldErrors.firstName" />
-                            <UiInput v-model="form.lastName" label="Last Name" required placeholder="e.g. Doe"
+                            <UiInput v-model="form.lastName" :label="t('common.field.lastName')" required :placeholder="t('employees.create.fields.lastName.placeholder')"
                                 :error="fieldErrors.lastName" />
 
                             <div class="md:col-span-1">
-                                <p class="ui-label">Gender <span class="text-primary">*</span></p>
+                                <p class="ui-label">{{ t('common.field.gender') }} <span class="text-primary">*</span></p>
                                 <div class="flex gap-6 mt-2">
                                     <label class="flex items-center gap-2 text-sm">
                                         <input v-model="form.gender" type="radio" class="h-4 w-4 accent-primary"
                                             value="MALE" />
-                                        <span>Male</span>
+                                        <span>{{ t('common.gender.male') }}</span>
                                     </label>
                                     <label class="flex items-center gap-2 text-sm">
                                         <input v-model="form.gender" type="radio" class="h-4 w-4 accent-primary"
                                             value="FEMALE" />
-                                        <span>Female</span>
+                                        <span>{{ t('common.gender.female') }}</span>
                                     </label>
                                     <label class="flex items-center gap-2 text-sm">
                                         <input v-model="form.gender" type="radio" class="h-4 w-4 accent-primary"
                                             value="OTHER" />
-                                        <span>Other</span>
+                                        <span>{{ t('common.gender.other') }}</span>
                                     </label>
                                 </div>
                                 <p v-if="fieldErrors.gender" class="text-xs text-red-500 mt-1">{{ fieldErrors.gender }}
                                 </p>
                             </div>
 
-                            <UiInput v-model="form.email" label="Email Address" required type="email"
-                                placeholder="john.doe@enterprise.com" :error="fieldErrors.email" />
+                            <UiInput v-model="form.email" :label="t('common.field.email')" required type="email"
+                                :placeholder="t('employees.create.fields.email.placeholder')" :error="fieldErrors.email" />
                         </div>
                     </section>
 
                     <section class="space-y-5">
                         <div>
-                            <h2 class="text-lg font-bold">Job Details</h2>
+                            <h2 class="text-lg font-bold">{{ t('employees.create.sections.jobDetails') }}</h2>
                             <div class="h-px bg-primary/10 mt-4" />
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <UiSelect v-model="form.departmentCode" label="Department" required
-                                placeholder="Select Department" :options="departmentOptions"
+                            <UiSelect v-model="form.departmentCode" :label="t('common.field.department')" required
+                                :placeholder="t('employees.create.fields.department.placeholder')" :options="departmentOptions"
                                 :disabled="loadingDepartments" :error="fieldErrors.departmentCode" />
-                            <UiSelect v-model="form.roleCode" label="Role" required placeholder="Select Role"
+                            <UiSelect v-model="form.roleCode" :label="t('common.field.role')" required :placeholder="t('employees.create.fields.role.placeholder')"
                                 :options="roleOptions" :disabled="loadingRoles" :error="fieldErrors.roleCode" />
                         </div>
                     </section>
 
                     <section class="space-y-5">
                         <div>
-                            <h2 class="text-lg font-bold">Contact Information</h2>
+                            <h2 class="text-lg font-bold">{{ t('employees.create.sections.contactInformation') }}</h2>
                             <div class="h-px bg-primary/10 mt-4" />
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <UiInput v-model="form.phone" label="Phone Number" required placeholder="+84 123 456 789"
-                                :error="fieldErrors.phone" hint="Include country code if applicable." />
+                            <UiInput v-model="form.phone" :label="t('common.field.phoneNumber')" required :placeholder="t('employees.create.fields.phone.placeholder')"
+                                :error="fieldErrors.phone" :hint="t('employees.create.fields.phone.hint')" />
                         </div>
                     </section>
 
                     <div class="flex items-center justify-between gap-4 pt-4">
                         <button type="button" class="text-slate-500 hover:text-primary text-sm font-medium"
                             :disabled="loading" @click="resetForm">
-                            Reset Form
+                            {{ t('employees.create.resetForm') }}
                         </button>
-                        <UiButton type="submit" variant="primary" :disabled="!canSubmit">Create Employee Account
+                        <UiButton type="submit" variant="primary" :disabled="!canSubmit">{{ t('employees.create.createAccount') }}
                         </UiButton>
                     </div>
                 </form>

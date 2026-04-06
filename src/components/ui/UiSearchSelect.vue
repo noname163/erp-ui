@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import UiInput from './UiInput.vue'
+import { useI18n } from '@/i18n'
 
 export type UiSearchSelectOption = {
   value: string
@@ -33,8 +34,10 @@ const props = withDefaults(defineProps<Props>(), {
   showValue: true,
   sectionTitle: '',
   sectionIcon: '',
-  noResultsText: 'No more results',
+  noResultsText: '',
 })
+const { t } = useI18n()
+const footerText = computed(() => props.noResultsText || t('common.state.noMoreResults'))
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
@@ -181,10 +184,9 @@ onBeforeUnmount(() => {
         <div
           class="px-4 py-2 text-center text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700"
         >
-          {{ noResultsText }}
+          {{ footerText }}
         </div>
       </div>
     </div>
   </section>
 </template>
-

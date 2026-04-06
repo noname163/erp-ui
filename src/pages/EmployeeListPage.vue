@@ -9,6 +9,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { AppRoute } from '@/types'
 import { employeeService } from '@/services/employee.service'
+import { useI18n } from '@/i18n'
 
 type EmployeeStatus = 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE'
 
@@ -27,6 +28,7 @@ type EmployeeRow = {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const query = ref('')
 const loading = ref(false)
@@ -95,19 +97,19 @@ const seedRows: EmployeeRow[] = [
 
 const rows = ref<EmployeeRow[]>([...seedRows])
 
-const headers: UiTableHeader[] = [
-  { key: 'id', label: 'ID' },
-  { key: 'code', label: 'Code' },
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'age', label: 'Age', align: 'center' },
-  { key: 'department', label: 'Department' },
-  { key: 'skills', label: 'Skills' },
-  { key: 'status', label: 'Status' },
-  { key: 'createdAt', label: 'Created' },
-  { key: 'createdBy', label: 'Created By' },
-  { key: 'actions', label: 'Actions', align: 'right' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'id', label: t('common.field.id') },
+  { key: 'code', label: t('common.field.code') },
+  { key: 'name', label: t('common.field.name') },
+  { key: 'email', label: t('common.field.email') },
+  { key: 'age', label: t('common.field.age'), align: 'center' },
+  { key: 'department', label: t('common.field.department') },
+  { key: 'skills', label: t('common.field.skills') },
+  { key: 'status', label: t('common.field.status') },
+  { key: 'createdAt', label: t('common.field.created') },
+  { key: 'createdBy', label: t('common.field.createdBy') },
+  { key: 'actions', label: t('common.field.actions'), align: 'right' },
+])
 
 function getString(obj: Record<string, unknown>, keys: string[], fallback = '') {
   for (const key of keys) {
@@ -174,7 +176,7 @@ async function loadEmployees() {
       rows.value = data.map(normalizeRow)
     }
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Unable to load employees from API. Showing sample data.'
+    error.value = e?.response?.data?.message ?? t('employees.list.loadFailed')
   } finally {
     loading.value = false
   }
@@ -235,9 +237,9 @@ function statusVariant(status: EmployeeStatus) {
 }
 
 function statusLabel(status: EmployeeStatus) {
-  if (status === 'ON_LEAVE') return 'On Leave'
-  if (status === 'INACTIVE') return 'Inactive'
-  return 'Active'
+  if (status === 'ON_LEAVE') return t('common.status.onLeave')
+  if (status === 'INACTIVE') return t('common.status.inactive')
+  return t('common.status.active')
 }
 
 function exportCsv() {
@@ -279,17 +281,17 @@ function setPage(page: number) {
     <div class="space-y-6">
       <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold">Employee Directory</h1>
+          <h1 class="text-2xl font-bold">{{ t('employees.list.title') }}</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage and monitor all workforce data in one central repository.
+            {{ t('employees.list.subtitle') }}
           </p>
         </div>
 
         <div class="flex flex-wrap gap-3">
-          <UiButton variant="outline" leadingIcon="filter_list">Filter</UiButton>
-          <UiButton variant="outline" leadingIcon="download" @click="exportCsv">Export</UiButton>
+          <UiButton variant="outline" leadingIcon="filter_list">{{ t('common.action.filter') }}</UiButton>
+          <UiButton variant="outline" leadingIcon="download" @click="exportCsv">{{ t('common.action.export') }}</UiButton>
           <UiButton variant="primary" leadingIcon="person_add" @click="router.push(AppRoute.CREATE_EMPLOYEE)">
-            Add Employee
+            {{ t('employees.list.addEmployee') }}
           </UiButton>
         </div>
       </div>
@@ -299,18 +301,18 @@ function setPage(page: number) {
           <UiInput
             v-model="query"
             leading-icon="search"
-            placeholder="Search for employees, codes, departments..."
+            :placeholder="t('employees.list.searchPlaceholder')"
           />
         </div>
         <p class="text-sm text-slate-500 dark:text-slate-400">
-          {{ filteredRows.length }} result{{ filteredRows.length === 1 ? '' : 's' }}
+          {{ t('employees.list.results', { count: filteredRows.length }) }}
         </p>
       </div>
 
       <div class="ui-card">
         <div class="p-4 md:p-6">
           <div v-if="error" class="text-sm text-amber-600 mb-4">{{ error }}</div>
-          <div v-if="loading" class="text-sm text-slate-500">Loading employees...</div>
+          <div v-if="loading" class="text-sm text-slate-500">{{ t('employees.list.loading') }}</div>
 
           <UiTable
             v-else
@@ -365,7 +367,7 @@ function setPage(page: number) {
                   v-if="row.skills.length === 0"
                   class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-400"
                 >
-                  None
+                  {{ t('common.state.none') }}
                 </span>
               </div>
             </template>
@@ -386,26 +388,24 @@ function setPage(page: number) {
 
             <template #cell-actions>
               <div class="flex justify-end gap-2">
-                <button type="button" class="p-1 hover:text-primary transition-colors" title="Edit">
+                <button type="button" class="p-1 hover:text-primary transition-colors" :title="t('common.action.edit')">
                   <UiIcon name="edit" size="18px" />
                 </button>
-                <button type="button" class="p-1 hover:text-red-500 transition-colors" title="Delete">
+                <button type="button" class="p-1 hover:text-red-500 transition-colors" :title="t('common.action.delete')">
                   <UiIcon name="delete" size="18px" />
                 </button>
               </div>
             </template>
 
             <template #empty>
-              <div class="py-8 text-sm text-slate-500">No employees found.</div>
+              <div class="py-8 text-sm text-slate-500">{{ t('employees.list.emptyTitle') }}</div>
             </template>
           </UiTable>
         </div>
 
         <div class="px-4 md:px-6 py-4 border-t border-primary/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div class="text-sm text-slate-500 dark:text-slate-400">
-            Showing <span class="font-semibold text-slate-900 dark:text-white">{{ pageStart }}</span> to
-            <span class="font-semibold text-slate-900 dark:text-white">{{ pageEnd }}</span> of
-            <span class="font-semibold text-slate-900 dark:text-white">{{ filteredRows.length }}</span> employees
+            {{ t('employees.list.showing', { start: pageStart, end: pageEnd, total: filteredRows.length }) }}
           </div>
 
           <div class="flex items-center gap-2">

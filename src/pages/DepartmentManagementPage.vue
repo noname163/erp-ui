@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { departmentService } from '@/services/department.service'
+import { useI18n } from '@/i18n'
 import type { Department } from '@/types'
 
+const { t } = useI18n()
 const rows = ref<Department[]>([])
 const name = ref('')
 const description = ref('')
@@ -21,7 +23,7 @@ async function load() {
     const data = (res?.content ?? res?.data ?? res?.departments ?? []) as Department[]
     rows.value = Array.isArray(data) ? data : []
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Failed to load departments'
+    error.value = e?.response?.data?.message ?? t('departments.list.loadFailed')
   } finally {
     loading.value = false
   }
@@ -36,7 +38,7 @@ async function create() {
     description.value = ''
     await load()
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Create department failed'
+    error.value = e?.response?.data?.message ?? t('departments.list.createFailed')
   } finally {
     loading.value = false
   }
@@ -44,19 +46,19 @@ async function create() {
 
 onMounted(load)
 
-const headers: UiTableHeader[] = [
-  { key: 'code', label: 'Code' },
-  { key: 'name', label: 'Name' },
-  { key: 'companyName', label: 'Company' },
-  { key: 'status', label: 'Status' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'code', label: t('common.field.code') },
+  { key: 'name', label: t('common.field.name') },
+  { key: 'companyName', label: t('common.field.company') },
+  { key: 'status', label: t('common.field.status') },
+])
 </script>
 
 <template>
   <AppLayout>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Departments</h1>
+        <h1 class="text-2xl font-bold">{{ t('departments.list.title') }}</h1>
         <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">GET/POST /api/departments</p>
       </div>
     </div>
@@ -65,7 +67,7 @@ const headers: UiTableHeader[] = [
       <div class="ui-card xl:col-span-2">
         <div class="p-4 md:p-6">
           <div v-if="error" class="text-sm text-red-500 mb-4">{{ error }}</div>
-          <div v-if="loading" class="text-sm text-slate-500">Loading...</div>
+          <div v-if="loading" class="text-sm text-slate-500">{{ t('common.state.loading') }}</div>
 
           <div v-else>
             <UiTable
@@ -88,11 +90,11 @@ const headers: UiTableHeader[] = [
 
       <div class="ui-card">
         <div class="p-4 md:p-6">
-          <h2 class="text-lg font-bold mb-4">Create department</h2>
+          <h2 class="text-lg font-bold mb-4">{{ t('departments.list.formTitle') }}</h2>
           <div class="space-y-4">
-            <UiInput v-model="name" label="Name" required />
-            <UiInput v-model="description" label="Description" />
-            <UiButton variant="primary" block :disabled="loading" @click="create">Create</UiButton>
+            <UiInput v-model="name" :label="t('common.field.name')" required />
+            <UiInput v-model="description" :label="t('common.field.description')" />
+            <UiButton variant="primary" block :disabled="loading" @click="create">{{ t('common.action.create') }}</UiButton>
           </div>
         </div>
       </div>

@@ -4,19 +4,27 @@ import { useAuthStore } from "@/stores/auth";
 
 import LoginPage from "@/pages/LoginPage.vue";
 import DashboardPage from "@/pages/DashboardPage.vue";
+import CalendarListPage from "@/pages/CalendarListPage.vue";
+import CalendarBuilderPage from "@/pages/CalendarBuilderPage.vue";
 import CompanyListPage from "@/pages/CompanyListPage.vue";
 import CreateCompanyPage from "@/pages/CreateCompanyPage.vue";
 import DepartmentManagementPage from "@/pages/DepartmentManagementPage.vue";
 import HRDashboardPage from "@/pages/HRDashboardPage.vue";
 import SalarySlipPage from "@/pages/SalarySlipPage.vue";
+import LogWorkListPage from "@/pages/LogWorkListPage.vue";
 import LogWorkPage from "@/pages/LogWorkPage.vue";
 import BulkLogWorkPage from "@/pages/BulkLogWorkPage.vue";
 import SalaryTemplateBuilderPage from "@/pages/SalaryTemplateBuilderPage.vue";
 import SalaryTemplateListPage from "@/pages/SalaryTemplateListPage.vue";
+import PayrollRunListPage from "@/pages/PayrollRunListPage.vue";
+import PayrollResultListPage from "@/pages/PayrollResultListPage.vue";
 import SalaryComponentsBuilderPage from "@/pages/SalaryComponentsBuilderPage.vue";
 import CreateEmployeePage from "@/pages/CreateEmployeePage.vue";
 import EmployeeListPage from "@/pages/EmployeeListPage.vue";
 import ResetPasswordPage from "@/pages/ResetPasswordPage.vue";
+import SalarySlipListPage from "@/pages/SalarySlipListPage.vue";
+import PolicyListPage from "@/pages/PolicyListPage.vue";
+import PolicyBuilderPage from "@/pages/PolicyBuilderPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -38,6 +46,32 @@ const router = createRouter({
           "SYSTEM_ADMIN",
           "ADMIN",
           "COMPANY_MANAGER",
+        ] satisfies RoleCode[],
+      },
+    },
+    {
+      path: AppRoute.CALENDARS,
+      component: CalendarListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
+        ] satisfies RoleCode[],
+      },
+    },
+    {
+      path: AppRoute.CALENDAR_BUILDER,
+      component: CalendarBuilderPage,
+      meta: {
+        auth: true,
+        roles: [
+          "SYSTEM_ADMIN",
+          "ADMIN",
+          "COMPANY_MANAGER",
+          "HUMAN_RESOURCES",
         ] satisfies RoleCode[],
       },
     },
@@ -111,9 +145,29 @@ const router = createRouter({
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
+      path: AppRoute.PAYROLL_RUNS,
+      component: PayrollRunListPage,
+      meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+      path: AppRoute.PAYROLL_RESULTS,
+      component: PayrollResultListPage,
+      meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
       path: AppRoute.PAYROLL_BUILDER,
       component: SalaryTemplateBuilderPage,
       meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+        path: AppRoute.PAYROLL_POLICIES,
+        component: PolicyListPage,
+        meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
+    },
+    {
+        path: AppRoute.PAYROLL_POLICY_BUILDER,
+        component: PolicyBuilderPage,
+        meta: { auth: true, roles: ["HUMAN_RESOURCES"] satisfies RoleCode[] },
     },
     {
       path: AppRoute.SALARY_SLIP,
@@ -127,7 +181,26 @@ const router = createRouter({
         ] satisfies RoleCode[],
       },
     },
-
+    {
+      path: AppRoute.SALARY_SLIP_LIST,
+      component: SalarySlipListPage,
+      meta: {
+        auth: true,
+        roles: [
+          "HUMAN_RESOURCES",
+          "COMPANY_MANAGER",
+          "EMPLOYEE",
+        ] satisfies RoleCode[],
+      },
+    },
+    {
+      path: AppRoute.LOG_WORK_LIST,
+      component: LogWorkListPage,
+      meta: {
+        auth: true,
+        roles: ["EMPLOYEE", "HUMAN_RESOURCES"] satisfies RoleCode[],
+      },
+    },
     {
       path: AppRoute.LOG_WORK,
       component: LogWorkPage,
@@ -167,6 +240,6 @@ export default router;
 
 function homeForRole(role: RoleCode) {
   if (role === "HUMAN_RESOURCES") return AppRoute.HR_OVERVIEW;
-  if (role === "EMPLOYEE") return AppRoute.LOG_WORK;
+  if (role === "EMPLOYEE") return AppRoute.LOG_WORK_LIST;
   return AppRoute.DASHBOARD;
 }

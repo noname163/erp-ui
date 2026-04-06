@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from '@/i18n'
 
 type Option = { value: string; label: string }
 
@@ -16,13 +17,14 @@ type Props = {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Select...',
+  placeholder: '',
   required: false,
   disabled: false,
   name: undefined,
   hint: undefined,
 })
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
+const { t } = useI18n()
 
 const rootEl = ref<HTMLElement | null>(null)
 const open = ref(false)
@@ -30,7 +32,8 @@ const activeIndex = ref(-1)
 
 const selectedIndex = computed(() => props.options.findIndex((o) => o.value === (props.modelValue ?? '')))
 const selectedOption = computed(() => (selectedIndex.value >= 0 ? props.options[selectedIndex.value] : null))
-const displayLabel = computed(() => selectedOption.value?.label ?? props.placeholder)
+const placeholderText = computed(() => props.placeholder || t('common.placeholder.select'))
+const displayLabel = computed(() => selectedOption.value?.label ?? placeholderText.value)
 const isPlaceholder = computed(() => !selectedOption.value)
 
 function setOpen(v: boolean) {
@@ -172,7 +175,7 @@ onBeforeUnmount(() => {
           tabindex="-1"
           aria-hidden="true"
         >
-          <option disabled value="">{{ placeholder }}</option>
+          <option disabled value="">{{ placeholderText }}</option>
           <option v-for="opt in options" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>

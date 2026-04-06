@@ -7,6 +7,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { salaryService, type SalaryRequest } from '@/services/salary.service'
+import { useI18n } from '@/i18n'
 
 type SalaryMethod = 'FIXED' | 'PERCENT' | 'FORMULA' | 'PLUS' | 'MINUS'
 type SalaryComponentRow = {
@@ -28,30 +29,31 @@ const page = ref(1)
 const pageSize = 10
 const totalElements = ref(0)
 const totalPages = ref(1)
+const { t } = useI18n()
 
 const rows = ref<SalaryComponentRow[]>([])
-const headers: UiTableHeader[] = [
-  { key: 'name', label: 'Name', thClass: 'min-w-[180px]' },
-  { key: 'formula', label: 'Formula', thClass: 'min-w-[220px]' },
-  { key: 'calculateMethod', label: 'Method' },
-  { key: 'isDeduct', label: 'Is Deduct', align: 'center' },
-  { key: 'createdBy', label: 'Created By' },
-  { key: 'updatedDate', label: 'Updated Date' },
-  { key: 'actions', label: 'Actions', align: 'right' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'name', label: t('common.field.name'), thClass: 'min-w-[180px]' },
+  { key: 'formula', label: t('common.field.formula'), thClass: 'min-w-[220px]' },
+  { key: 'calculateMethod', label: t('common.field.method') },
+  { key: 'isDeduct', label: t('salaryComponents.fields.isDeduct'), align: 'center' },
+  { key: 'createdBy', label: t('common.field.createdBy') },
+  { key: 'updatedDate', label: t('salaryComponents.fields.updatedDate') },
+  { key: 'actions', label: t('common.field.actions'), align: 'right' },
+])
 
-const calcOptions = [
-  { value: 'FIXED', label: 'Fixed' },
-  { value: 'PERCENT', label: 'Percentage' },
-  { value: 'FORMULA', label: 'Formula' },
-  { value: 'PLUS', label: 'Plus' },
-  { value: 'MINUS', label: 'Minus' },
-]
+const calcOptions = computed(() => [
+  { value: 'FIXED', label: t('salaryComponents.options.fixed') },
+  { value: 'PERCENT', label: t('salaryComponents.options.percentage') },
+  { value: 'FORMULA', label: t('salaryComponents.options.formula') },
+  { value: 'PLUS', label: t('salaryComponents.options.plus') },
+  { value: 'MINUS', label: t('salaryComponents.options.minus') },
+])
 
-const deductOptions = [
-  { value: 'false', label: 'No' },
-  { value: 'true', label: 'Yes' },
-]
+const deductOptions = computed(() => [
+  { value: 'false', label: t('common.status.no') },
+  { value: 'true', label: t('common.status.yes') },
+])
 
 const form = ref<{ name: string; calculateMethod: SalaryMethod; isDeduct: 'true' | 'false' }>({
   name: '',
@@ -59,12 +61,12 @@ const form = ref<{ name: string; calculateMethod: SalaryMethod; isDeduct: 'true'
   isDeduct: 'false',
 })
 
-const modalTitle = computed(() => (editingId.value === null ? 'Create Component' : 'Edit Component'))
+const modalTitle = computed(() => (editingId.value === null ? t('salaryComponents.modal.createTitle') : t('salaryComponents.modal.editTitle')))
 const summaryText = computed(() => {
-  if (totalElements.value === 0) return 'Showing 0 results'
+  if (totalElements.value === 0) return t('salaryComponents.summaryZero')
   const from = (page.value - 1) * pageSize + 1
   const to = Math.min(page.value * pageSize, totalElements.value)
-  return `Showing ${from} to ${to} of ${totalElements.value} results`
+  return t('salaryComponents.summary', { from, to, total: totalElements.value })
 })
 
 function formatDate(value?: string | null) {
@@ -102,7 +104,7 @@ async function loadRows() {
     totalElements.value = Number(res?.totalElements ?? rows.value.length ?? 0)
     totalPages.value = Math.max(1, Number(res?.totalPages ?? Math.ceil(totalElements.value / pageSize) ?? 1))
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Failed to load salary components'
+    error.value = e?.response?.data?.message ?? t('salaryComponents.loadFailed')
     rows.value = []
     totalElements.value = 0
     totalPages.value = 1
@@ -112,7 +114,7 @@ async function loadRows() {
 }
 
 function methodLabel(method: SalaryMethod) {
-  const match = calcOptions.find((o) => o.value === method)
+  const match = calcOptions.value.find((o) => o.value === method)
   return match?.label ?? method
 }
 
@@ -147,11 +149,11 @@ function closeModal() {
 async function saveComponent() {
   const trimmedName = form.value.name.trim()
   if (!trimmedName) {
-    error.value = 'Name is required'
+    error.value = t('salaryComponents.validation.nameRequired')
     return
   }
   if (trimmedName.length > 255) {
-    error.value = 'Name must be at most 255 characters'
+    error.value = t('salaryComponents.validation.nameMax')
     return
   }
 
@@ -167,11 +169,11 @@ async function saveComponent() {
 
   try {
     await salaryService.createComponents([payload])
-    message.value = `${editingId.value === null ? 'Created' : 'Saved'} ${payload.name}`
+    message.value = t(editingId.value === null ? 'salaryComponents.createdMessage' : 'salaryComponents.savedMessage', { name: payload.name })
     closeModal()
     await loadRows()
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Create salary component failed'
+    error.value = e?.response?.data?.message ?? t('salaryComponents.createFailed')
   } finally {
     loading.value = false
   }
@@ -179,7 +181,7 @@ async function saveComponent() {
 
 function removeRow(id: number) {
   rows.value = rows.value.filter((r) => r.id !== id)
-  message.value = 'Component removed'
+  message.value = t('salaryComponents.removed')
 }
 
 async function changePage(next: number) {
@@ -195,10 +197,10 @@ onMounted(loadRows)
   <AppLayout>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Salary Components</h1>
-        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage earnings, deductions, and tax calculation rules.</p>
+        <h1 class="text-2xl font-bold">{{ t('salaryComponents.title') }}</h1>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">{{ t('salaryComponents.subtitle') }}</p>
       </div>
-      <UiButton variant="primary" :disabled="loading" @click="openCreateModal">Create Component</UiButton>
+      <UiButton variant="primary" :disabled="loading" @click="openCreateModal">{{ t('salaryComponents.createComponent') }}</UiButton>
     </div>
 
     <div class="ui-card">
@@ -234,7 +236,7 @@ onMounted(loadRows)
                 class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-bold"
                 :class="row.isDeduct ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'"
               >
-                {{ row.isDeduct ? 'YES' : 'NO' }}
+                {{ row.isDeduct ? t('common.status.yes') : t('common.status.no') }}
               </span>
             </div>
           </template>
@@ -252,11 +254,11 @@ onMounted(loadRows)
         </UiTable>
 
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t border-primary/10 mt-2">
-          <p class="text-sm text-slate-500 dark:text-slate-400">{{ summaryText }}</p>
-          <div class="flex items-center gap-2">
-            <UiButton variant="outline" :disabled="page <= 1 || loading" @click="changePage(page - 1)">Previous</UiButton>
-            <span class="text-sm text-slate-600 dark:text-slate-300">Page {{ page }} / {{ totalPages }}</span>
-            <UiButton variant="outline" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">Next</UiButton>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ summaryText }}</p>
+            <div class="flex items-center gap-2">
+            <UiButton variant="outline" :disabled="page <= 1 || loading" @click="changePage(page - 1)">{{ t('common.action.previous') }}</UiButton>
+            <span class="text-sm text-slate-600 dark:text-slate-300">{{ t('common.pagination.pageOf', { page, total: totalPages }) }}</span>
+            <UiButton variant="outline" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">{{ t('common.action.next') }}</UiButton>
           </div>
         </div>
       </div>
@@ -273,14 +275,14 @@ onMounted(loadRows)
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiInput v-model="form.name" label="Name" required placeholder="Basic Salary" />
-            <UiSelect v-model="form.calculateMethod" label="Method" :options="calcOptions" required />
-            <UiSelect v-model="form.isDeduct" label="Is Deduct" :options="deductOptions" required />
+            <UiInput v-model="form.name" :label="t('common.field.name')" required :placeholder="t('salaryComponents.namePlaceholder')" />
+            <UiSelect v-model="form.calculateMethod" :label="t('common.field.method')" :options="calcOptions" required />
+            <UiSelect v-model="form.isDeduct" :label="t('salaryComponents.fields.isDeduct')" :options="deductOptions" required />
           </div>
 
           <div class="flex justify-end gap-3">
-            <UiButton variant="outline" @click="closeModal">Cancel</UiButton>
-            <UiButton variant="primary" :disabled="loading" @click="saveComponent">{{ editingId === null ? 'Create' : 'Update' }}</UiButton>
+            <UiButton variant="outline" @click="closeModal">{{ t('common.action.cancel') }}</UiButton>
+            <UiButton variant="primary" :disabled="loading" @click="saveComponent">{{ editingId === null ? t('common.action.create') : t('common.action.update') }}</UiButton>
           </div>
         </div>
       </div>

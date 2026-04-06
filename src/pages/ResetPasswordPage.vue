@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from '@/i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import UiCard from '@/components/ui/UiCard.vue'
 import UiCardBody from '@/components/ui/UiCardBody.vue'
@@ -13,6 +14,7 @@ import { AppRoute } from '@/types'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -24,46 +26,65 @@ const showConfirm = ref(false)
 
 const submitting = ref(false)
 const submitError = ref('')
-const submitSuccess = ref('')
 
 const fieldErrors = computed(() => {
   const errors: Record<string, string> = {}
-  if (!currentPassword.value) errors.currentPassword = 'Current password is required.'
-  if (!newPassword.value) errors.newPassword = 'New password is required.'
-  if (!confirmPassword.value) errors.confirmPassword = 'Please confirm your new password.'
-  if (
-    newPassword.value &&
-    confirmPassword.value &&
-    newPassword.value !== confirmPassword.value
-  ) {
-    errors.confirmPassword = 'Passwords do not match.'
+  if (!currentPassword.value) errors.currentPassword = t('resetPassword.error.currentRequired')
+  if (!newPassword.value) errors.newPassword = t('resetPassword.error.newRequired')
+  if (!confirmPassword.value) errors.confirmPassword = t('resetPassword.error.confirmRequired')
+
+  if (newPassword.value && confirmPassword.value && newPassword.value !== confirmPassword.value) {
+    errors.confirmPassword = t('resetPassword.error.passwordMismatch')
   }
+
   if (currentPassword.value && newPassword.value && currentPassword.value === newPassword.value) {
-    errors.newPassword = 'New password must be different from your current password.'
+    errors.newPassword = t('resetPassword.error.samePassword')
   }
+
   return errors
 })
 
 const passwordStrength = computed(() => {
-  const p = newPassword.value
-  const hasLen = p.length >= 8
-  const hasNumber = /\d/.test(p)
-  const hasSymbol = /[^a-zA-Z0-9]/.test(p)
-  const hasUpper = /[A-Z]/.test(p)
-  const score = [hasLen, hasNumber, hasSymbol, hasUpper].filter(Boolean).length
+  const passwordValue = newPassword.value
+  const checks = {
+    hasLength: passwordValue.length >= 8,
+    hasNumber: /\d/.test(passwordValue),
+    hasSymbol: /[^a-zA-Z0-9]/.test(passwordValue),
+    hasUpper: /[A-Z]/.test(passwordValue),
+  }
+  const score = Object.values(checks).filter(Boolean).length
 
-  const label = score >= 4 ? 'Strong' : score >= 2 ? 'Medium' : 'Weak'
-  const color = score >= 4 ? 'bg-green-500' : score >= 2 ? 'bg-orange-500' : 'bg-red-500'
-  const bars = score >= 4 ? 4 : score >= 2 ? 2 : score >= 1 ? 1 : 0
-  return { label, color, bars }
+  if (score >= 4) {
+    return {
+      label: t('resetPassword.strengthStrong'),
+      toneClass: 'text-green-500',
+      barClass: 'bg-green-500',
+      bars: 4,
+    }
+  }
+
+  if (score >= 2) {
+    return {
+      label: t('resetPassword.strengthMedium'),
+      toneClass: 'text-orange-500',
+      barClass: 'bg-orange-500',
+      bars: 2,
+    }
+  }
+
+  return {
+    label: t('resetPassword.strengthWeak'),
+    toneClass: 'text-red-500',
+    barClass: 'bg-red-500',
+    bars: score >= 1 ? 1 : 0,
+  }
 })
 
 async function submit() {
   submitError.value = ''
-  submitSuccess.value = ''
 
   if (Object.keys(fieldErrors.value).length) {
-    submitError.value = 'Please fix the errors and try again.'
+    submitError.value = t('resetPassword.error.fixAndTryAgain')
     return
   }
 
@@ -78,7 +99,7 @@ async function submit() {
     auth.logout()
     router.replace(AppRoute.LOGIN)
   } catch (e: any) {
-    submitError.value = e?.response?.data?.message ?? 'Password update failed.'
+    submitError.value = e?.response?.data?.message ?? t('resetPassword.error.updateFailed')
   } finally {
     submitting.value = false
   }
@@ -95,8 +116,8 @@ function cancel() {
       <div class="flex items-center gap-3 text-primary mb-6">
         <UiIcon name="lock" size="30px" />
         <div>
-          <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Security Settings</h1>
-          <p class="text-sm text-slate-500 dark:text-slate-400">Change your account password</p>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">{{ t('resetPassword.pageTitle') }}</h1>
+          <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('resetPassword.pageSubtitle') }}</p>
         </div>
       </div>
 
@@ -104,23 +125,19 @@ function cancel() {
         <UiCard class="w-full max-w-md">
           <UiCardBody>
             <div class="text-center mb-8">
-              <div
-                class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4"
-              >
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
                 <span class="material-symbols-outlined text-3xl">lock</span>
               </div>
-              <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Change Password</h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                Update your security credentials for the ERP System.
-              </p>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ t('resetPassword.cardTitle') }}</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">{{ t('resetPassword.cardSubtitle') }}</p>
             </div>
 
             <form class="space-y-6" @submit.prevent="submit">
               <UiInput
                 v-model="currentPassword"
-                label="Current Password"
+                :label="t('resetPassword.currentPassword')"
                 :type="showCurrent ? 'text' : 'password'"
-                placeholder="••••••••"
+                :placeholder="t('resetPassword.passwordPlaceholder')"
                 required
                 autocomplete="current-password"
                 name="currentPassword"
@@ -132,9 +149,9 @@ function cancel() {
               <div>
                 <UiInput
                   v-model="newPassword"
-                  label="New Password"
+                  :label="t('resetPassword.newPassword')"
                   :type="showNew ? 'text' : 'password'"
-                  placeholder="••••••••"
+                  :placeholder="t('resetPassword.passwordPlaceholder')"
                   required
                   autocomplete="new-password"
                   name="newPassword"
@@ -146,41 +163,32 @@ function cancel() {
                 <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-primary/10">
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                      Security Strength
+                      {{ t('resetPassword.strengthLabel') }}
                     </span>
-                    <span
-                      class="text-[10px] font-bold uppercase"
-                      :class="
-                        passwordStrength.label === 'Strong'
-                          ? 'text-green-500'
-                          : passwordStrength.label === 'Medium'
-                            ? 'text-orange-500'
-                            : 'text-red-500'
-                      "
-                    >
+                    <span class="text-[10px] font-bold uppercase" :class="passwordStrength.toneClass">
                       {{ passwordStrength.label }}
                     </span>
                   </div>
                   <div class="flex gap-1.5 h-1.5 mb-3">
                     <div
-                      v-for="i in 4"
-                      :key="i"
+                      v-for="index in 4"
+                      :key="index"
                       class="flex-1 rounded-full"
-                      :class="i <= passwordStrength.bars ? passwordStrength.color : 'bg-slate-200 dark:bg-slate-700'"
+                      :class="index <= passwordStrength.bars ? passwordStrength.barClass : 'bg-slate-200 dark:bg-slate-700'"
                     ></div>
                   </div>
                   <p class="text-sm text-slate-500 dark:text-slate-400 flex items-start gap-2">
                     <span class="material-symbols-outlined text-sm mt-0.5 text-primary">info</span>
-                    Must be at least 8 characters and include a number and a symbol (uppercase recommended).
+                    {{ t('resetPassword.passwordHint') }}
                   </p>
                 </div>
               </div>
 
               <UiInput
                 v-model="confirmPassword"
-                label="Confirm New Password"
+                :label="t('resetPassword.confirmPassword')"
                 :type="showConfirm ? 'text' : 'password'"
-                placeholder="••••••••"
+                :placeholder="t('resetPassword.passwordPlaceholder')"
                 required
                 autocomplete="new-password"
                 name="confirmPassword"
@@ -190,18 +198,17 @@ function cancel() {
               />
 
               <div v-if="submitError" class="text-sm text-red-500">{{ submitError }}</div>
-              <div v-if="submitSuccess" class="text-sm text-green-600 dark:text-green-400">{{ submitSuccess }}</div>
 
               <div class="pt-2 flex flex-col gap-3">
                 <UiButton type="submit" variant="primary" block :disabled="submitting" leadingIcon="refresh" class="h-12">
-                  {{ submitting ? 'Updating...' : 'Update Password' }}
+                  {{ submitting ? t('resetPassword.updating') : t('resetPassword.updatePassword') }}
                 </UiButton>
                 <button
                   type="button"
                   class="w-full py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                   @click="cancel"
                 >
-                  Cancel and return
+                  {{ t('resetPassword.cancelAndReturn') }}
                 </button>
               </div>
             </form>

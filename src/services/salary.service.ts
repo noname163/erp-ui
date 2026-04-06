@@ -11,6 +11,7 @@ export type SalaryTemplateDetailRequest = {
   quantity: string;
   unitCode: string;
   sequenceOrder: string;
+  dependencyCode?: string;
 };
 export type SalaryTemplateRequest = {
   name: string;
@@ -50,6 +51,15 @@ export type SalaryTemplateListQuery = {
   effectiveFrom?: string;
   effectiveTo?: string;
 };
+export type SalaryTemplateOptionResponse = { code: string; name: string };
+export type SalaryTemplateDetailResponse = {
+  salaryCode: string;
+  amount: string;
+  quantity?: string;
+  unitCode?: string;
+  sequenceOrder?: string;
+  dependencyCode?: string;
+};
 
 export const salaryService = {
   async listComponents(params?: Record<string, any>) {
@@ -83,6 +93,19 @@ export const salaryService = {
   },
   async listTemplates(query: SalaryTemplateListQuery = {}) {
     const { data } = await http.get("/api/salary-templates", { params: query });
+    return data;
+  },
+  async templateOptions(params?: SelectionOptionQuery) {
+    const { data } = await http.get<SalaryTemplateOptionResponse[] | any>(
+      "/api/salary-templates/options",
+      { params },
+    );
+    return data;
+  },
+  async templateDetails(salaryTemplateCode: string) {
+    const { data } = await http.get<SalaryTemplateDetailResponse[] | any>(
+      `/api/salary-templates/${salaryTemplateCode}/details`,
+    );
     return data;
   },
 };

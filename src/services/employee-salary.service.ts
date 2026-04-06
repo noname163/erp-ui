@@ -19,8 +19,48 @@ export type EmployeeSalarySlipRequest = EmployeeSalaryRequest & {
 }
 
 export type EmployeeSalarySlipDetailRequest = {
+  salaryCode: string;
+  amount: string;
+  dependencyCode?: string;
+  dayType:
+    | "NORMAL"
+    | "HOLIDAY_WORK"
+    | "WEEKEND_WORK"
+    | "PTO_PAID"
+    | "PTO_UNPAID"
+    | "UNPAID_LEAVE";
+};
+
+export type EmployeeSalaryListQuery = {
+  employeeName?: string
+  minAmount?: string
+  maxAmount?: string
+  effectiveFrom?: string
+  effectiveTo?: string
+  page?: number
+  size?: number
+  sortBy?: string
+  sortDir?: 'ASC' | 'DESC'
+}
+
+export type EmployeeSalaryListResponse = {
   salaryCode: string
-  amount: string
+  employeeName: string
+  effectiveFrom: string
+  effectiveTo?: string | null
+  totalAmount: string
+  currency: string
+}
+
+export type EmployeeSalaryPagedResponse<T> = {
+  data?: T[]
+  page?: number
+  size?: number
+  totalElements?: number
+  totalPages?: number
+  last?: boolean
+  message?: string
+  success?: boolean
 }
 
 export const employeeSalaryService = {
@@ -34,6 +74,12 @@ export const employeeSalaryService = {
   },
   async createDetails(req: EmployeeSalaryDetailCreateRequest[]) {
     const { data } = await http.post('/api/employee-salary-details', req)
+    return data
+  },
+  async list(query: EmployeeSalaryListQuery = {}) {
+    const { data } = await http.get<EmployeeSalaryPagedResponse<EmployeeSalaryListResponse>>('/api/employee-salaries', {
+      params: query,
+    })
     return data
   },
 }
