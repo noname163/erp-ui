@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from '@/i18n'
+
 export type UiTableHeader = {
   key: string
   label: string
@@ -23,11 +26,11 @@ type Props = {
   scroll?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   headers: () => [],
   rows: () => [],
   rowKey: undefined,
-  emptyText: 'No data',
+  emptyText: '',
   headRowClass: '',
   rowClass: '',
   thBaseClass: 'px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider',
@@ -38,6 +41,8 @@ withDefaults(defineProps<Props>(), {
   bodyClass: '',
   scroll: true,
 })
+const { t } = useI18n()
+const emptyStateText = computed(() => props.emptyText || t('common.state.noData'))
 
 function alignClass(align?: UiTableHeader['align']) {
   if (align === 'center') return 'text-center'
@@ -75,7 +80,7 @@ function resolveRowClass(row: any, index: number, rowClass?: Props['rowClass']) 
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800" :class="bodyClass">
         <tr v-if="rows.length === 0">
           <td :colspan="headers.length || 1" class="px-6 py-6 text-sm text-slate-500">
-            <slot name="empty">{{ emptyText }}</slot>
+            <slot name="empty">{{ emptyStateText }}</slot>
           </td>
         </tr>
 

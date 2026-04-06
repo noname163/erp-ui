@@ -14,10 +14,8 @@ import UiSelect from "@/components/ui/UiSelect.vue";
 import UiTextarea from "@/components/ui/UiTextarea.vue";
 import {
   addMonths,
-  calendarRegionOptions,
   calendarService,
   calendarTimezoneOptions,
-  calendarTypeOptions,
   createAssignment,
   createAssignmentMap,
   defaultCalendarDateNote,
@@ -34,6 +32,7 @@ import type {
   CompanyCalendarDateResponse,
   CompanyCalendarRequest,
 } from "@/services/calendar.service";
+import { useI18n } from "@/i18n";
 import { AppRoute } from "@/types";
 
 type CalendarEditorSelection = CalendarDayType | "CLEAR_DATE";
@@ -47,6 +46,7 @@ type CalendarEditorOption = {
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 
 const form = ref(calendarService.createDraft());
 const assignments = ref<CalendarAssignment[]>(calendarService.createAssignments());
@@ -60,28 +60,76 @@ const loadingDetails = ref(false);
 const error = ref("");
 const message = ref("");
 
-const clearOption: CalendarEditorOption = {
-  value: "CLEAR_DATE",
-  label: "Clear date",
-  description: "Remove an explicit override and leave the date untyped",
-  icon: "backspace",
-  dotClass: "bg-slate-900 dark:bg-white",
-};
+const regionOptions = computed(() => [
+  { value: "THAILAND", label: t("calendar.region.thailand") },
+  { value: "VIETNAM", label: t("calendar.region.vietnam") },
+  { value: "SINGAPORE", label: t("calendar.region.singapore") },
+  { value: "GLOBAL", label: t("calendar.region.global") },
+]);
 
-const editorOptions: CalendarEditorOption[] = [...calendarTypeOptions, clearOption];
+const editorOptions = computed<CalendarEditorOption[]>(() => [
+  {
+    value: "NORMAL",
+    label: t("calendar.dayType.normal.label"),
+    description: t("calendar.dayType.normal.description"),
+    icon: "check_circle",
+    dotClass: "bg-primary",
+  },
+  {
+    value: "WEEKEND",
+    label: t("calendar.dayType.weekend.label"),
+    description: t("calendar.dayType.weekend.description"),
+    icon: "event_busy",
+    dotClass: "bg-slate-400",
+  },
+  {
+    value: "HOLIDAY",
+    label: t("calendar.dayType.holiday.label"),
+    description: t("calendar.dayType.holiday.description"),
+    icon: "celebration",
+    dotClass: "bg-emerald-500",
+  },
+  {
+    value: "WEEKEND_WORK",
+    label: t("calendar.dayType.weekendWork.label"),
+    description: t("calendar.dayType.weekendWork.description"),
+    icon: "bolt",
+    dotClass: "bg-amber-500",
+  },
+  {
+    value: "COMPANY_DAY_OFF",
+    label: t("calendar.dayType.companyDayOff.label"),
+    description: t("calendar.dayType.companyDayOff.description"),
+    icon: "block",
+    dotClass: "bg-rose-500",
+  },
+  {
+    value: "CLEAR_DATE",
+    label: t("calendar.builder.clearOption.label"),
+    description: t("calendar.builder.clearOption.description"),
+    icon: "backspace",
+    dotClass: "bg-slate-900 dark:bg-white",
+  },
+]);
 
 const calendarCode = computed(() => queryString(route.query.code));
 const isEditMode = computed(() => calendarCode.value.length > 0);
-const pageTitle = computed(() => (isEditMode.value ? "Edit Calendar" : "Create Calendar"));
+const pageTitle = computed(() =>
+  t(isEditMode.value ? "calendar.builder.titleEdit" : "calendar.builder.titleCreate"),
+);
 const pageEyebrow = computed(() =>
   isEditMode.value
-    ? ["Organization", "Calendars", calendarCode.value]
-    : ["Organization", "Calendars", "New Calendar"],
+    ? [t("calendar.builder.breadcrumb.organization"), t("calendar.builder.breadcrumb.calendars"), calendarCode.value]
+    : [
+        t("calendar.builder.breadcrumb.organization"),
+        t("calendar.builder.breadcrumb.calendars"),
+        t("calendar.builder.breadcrumb.newCalendar"),
+      ],
 );
 const pageDescription = computed(() =>
   isEditMode.value
-    ? "Loaded from the selected calendar code. Changes are saved back to the company calendar update endpoint."
-    : "Define operating periods and assign exceptions for holidays, shutdowns, and weekend coverage.",
+    ? t("calendar.builder.descriptionEdit")
+    : t("calendar.builder.descriptionCreate"),
 );
 
 const visibleMonths = computed(() => getMonthsForView(focusMonth.value, viewMode.value));
@@ -98,11 +146,11 @@ const currentHeading = computed(() => {
     return `Q${quarter} ${year}`;
   }
 
-  return `${focusMonth.value.split("-")[0]} Calendar Overview`;
+  return t("calendar.builder.yearOverview", { year: focusMonth.value.split("-")[0] });
 });
 
 const currentSelection = computed(() => {
-  return editorOptions.find((item) => item.value === selectedType.value) ?? editorOptions[0];
+  return editorOptions.value.find((item) => item.value === selectedType.value) ?? editorOptions.value[0];
 });
 
 const selectedDateLabel = computed(() => {
@@ -197,7 +245,7 @@ async function loadCalendarDates(code: string) {
     }
   } catch (e: any) {
     assignments.value = [];
-    error.value = e?.response?.data?.message ?? "Unable to load calendar dates.";
+    error.value = e?.response?.data?.message ?? t("calendar.builder.errors.loadDatesFailed");
   } finally {
     loadingDetails.value = false;
   }
@@ -208,23 +256,23 @@ async function saveCalendar() {
   message.value = "";
 
   if (!compiledCalendarRequest.value.name) {
-    error.value = "Calendar name is required.";
+    error.value = t("calendar.builder.validation.nameRequired");
     return;
   }
   if (!compiledCalendarRequest.value.effectiveFrom || !compiledCalendarRequest.value.effectiveTo) {
-    error.value = "Effective dates are required.";
+    error.value = t("calendar.builder.validation.effectiveDatesRequired");
     return;
   }
   if (!compiledCalendarRequest.value.region) {
-    error.value = "Region is required.";
+    error.value = t("calendar.builder.validation.regionRequired");
     return;
   }
   if (!compiledCalendarRequest.value.timeZone) {
-    error.value = "Timezone is required.";
+    error.value = t("calendar.builder.validation.timezoneRequired");
     return;
   }
   if (!compiledCalendarRequest.value.note) {
-    error.value = "Notes are required.";
+    error.value = t("calendar.builder.validation.notesRequired");
     return;
   }
 
@@ -239,11 +287,11 @@ async function saveCalendar() {
       await router.push(AppRoute.CALENDARS);
       return;
     }
-    message.value = `Calendar saved with status ${response.status}.`;
+    message.value = t("calendar.builder.messages.unexpectedStatus", { status: response.status });
   } catch (e: any) {
     error.value = e?.response?.data?.message ?? (isEditMode.value
-      ? "Update company calendar failed"
-      : "Create company calendar failed");
+      ? t("calendar.builder.errors.updateFailed")
+      : t("calendar.builder.errors.createFailed"));
   } finally {
     saving.value = false;
   }
@@ -397,7 +445,7 @@ function asRecord(value: unknown) {
       >
         <template #actions>
           <UiButton variant="outline" leading-icon="arrow_back" @click="router.push(AppRoute.CALENDARS)">
-            Back to List
+            {{ t('calendar.builder.actions.backToList') }}
           </UiButton>
         </template>
       </CalendarPageHeader>
@@ -406,9 +454,7 @@ function asRecord(value: unknown) {
         v-if="isEditMode"
         class="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-700"
       >
-        Viewing calendar <span class="font-bold">{{ calendarCode }}</span> in edit layout. Dates are loaded from
-        <span class="font-mono">/api/company-calendars/{{ calendarCode }}/dates</span> and saved with
-        <span class="font-mono">PUT /api/company-calendars/{{ calendarCode }}</span>.
+        {{ t('calendar.builder.editBanner', { code: calendarCode }) }}
       </div>
 
       <div class="grid grid-cols-1 gap-8 xl:grid-cols-12">
@@ -420,35 +466,35 @@ function asRecord(value: unknown) {
                   <UiIcon name="settings_suggest" size="22px" />
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-slate-900 dark:text-white">Configuration</h2>
+                  <h2 class="text-xl font-bold text-slate-900 dark:text-white">{{ t('calendar.builder.sections.configuration') }}</h2>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ isEditMode ? "Metadata passed from the calendar list selection." : "Core metadata for the calendar template." }}
+                    {{ isEditMode ? t('calendar.builder.sections.configurationEditHint') : t('calendar.builder.sections.configurationCreateHint') }}
                   </p>
                 </div>
               </div>
 
               <UiInput
                 v-model="form.name"
-                label="Calendar Name"
-                placeholder="APAC Operations 2026"
+                :label="t('calendar.builder.fields.calendarName')"
+                :placeholder="t('calendar.builder.fields.calendarName')"
                 required
               />
 
               <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <UiInput v-model="form.effectiveFrom" label="Effective From" type="date" required />
-                <UiInput v-model="form.effectiveTo" label="Effective To" type="date" required />
+                <UiInput v-model="form.effectiveFrom" :label="t('common.field.effectiveFrom')" type="date" required />
+                <UiInput v-model="form.effectiveTo" :label="t('common.field.effectiveTo')" type="date" required />
               </div>
 
               <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <UiSelect v-model="form.region" label="Region" :options="calendarRegionOptions" />
-                <UiSelect v-model="form.timezone" label="Timezone" :options="calendarTimezoneOptions" />
+                <UiSelect v-model="form.region" :label="t('common.field.region')" :options="regionOptions" />
+                <UiSelect v-model="form.timezone" :label="t('common.field.timezone')" :options="calendarTimezoneOptions" />
               </div>
 
               <UiTextarea
                 v-model="form.description"
-                label="Notes"
+                :label="t('calendar.builder.fields.notes')"
                 :rows="4"
-                placeholder="Describe the teams or rules covered by this calendar..."
+                :placeholder="t('calendar.builder.fields.notesPlaceholder')"
               />
             </UiCardBody>
           </UiCard>
@@ -460,9 +506,9 @@ function asRecord(value: unknown) {
                   <UiIcon name="brush" size="22px" />
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-slate-900 dark:text-white">Date Assignment</h2>
+                  <h2 class="text-xl font-bold text-slate-900 dark:text-white">{{ t('calendar.builder.sections.dateAssignment') }}</h2>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Pick a date type, then click a day in month view.
+                    {{ t('calendar.builder.sections.dateAssignmentHint') }}
                   </p>
                 </div>
               </div>
@@ -482,20 +528,20 @@ function asRecord(value: unknown) {
 
               <UiInput
                 v-model="assignmentLabel"
-                label="Assignment Label"
-                placeholder="Optional note for the next clicked date"
+                :label="t('calendar.builder.fields.assignmentLabel')"
+                :placeholder="t('calendar.builder.fields.assignmentPlaceholder')"
                 :disabled="selectedType === 'CLEAR_DATE'"
                 :hint="
                   selectedType === 'CLEAR_DATE'
-                    ? 'Clear mode does not use labels. Click dates to remove overrides.'
-                    : 'Used for holidays, day-offs, and special coverage labels.'
+                    ? t('calendar.builder.hints.clearMode')
+                    : t('calendar.builder.hints.assignmentLabel')
                 "
               />
             </UiCardBody>
           </UiCard>
 
           <UiButton block leading-icon="save" :disabled="saving || loadingDetails" @click="saveCalendar">
-            {{ saving ? "Saving..." : isEditMode ? "Save Changes" : "Save Calendar Template" }}
+            {{ saving ? t('common.state.saving') : isEditMode ? t('calendar.builder.actions.saveChanges') : t('calendar.builder.actions.saveCalendarTemplate') }}
           </UiButton>
 
           <p v-if="error" class="text-sm font-medium text-red-500">{{ error }}</p>
@@ -515,7 +561,7 @@ function asRecord(value: unknown) {
                       {{ currentHeading }}
                     </h3>
                     <p class="text-sm text-slate-500 dark:text-slate-400">
-                      Click any visible date to apply the selected calendar action in month, quarter, or year view.
+                      {{ t('calendar.builder.sections.calendarSurfaceHint') }}
                     </p>
                   </div>
                   <UiButton variant="outline" icon-only @click="moveRange(1)">
@@ -525,13 +571,13 @@ function asRecord(value: unknown) {
 
                 <div class="flex flex-wrap gap-2">
                   <UiButton :variant="viewMode === 'MONTH' ? 'primary' : 'outline'" @click="setViewMode('MONTH')">
-                    Month
+                    {{ t('calendar.builder.viewModes.month') }}
                   </UiButton>
                   <UiButton :variant="viewMode === 'QUARTER' ? 'primary' : 'outline'" @click="setViewMode('QUARTER')">
-                    Quarter
+                    {{ t('calendar.builder.viewModes.quarter') }}
                   </UiButton>
                   <UiButton :variant="viewMode === 'YEAR' ? 'primary' : 'outline'" @click="setViewMode('YEAR')">
-                    Year
+                    {{ t('calendar.builder.viewModes.year') }}
                   </UiButton>
                 </div>
               </div>
@@ -539,7 +585,7 @@ function asRecord(value: unknown) {
 
             <div class="p-4 md:p-6">
               <div v-if="loadingDetails" class="rounded-xl bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/50">
-                Loading calendar dates...
+                {{ t('calendar.builder.loadingDates') }}
               </div>
 
               <CalendarMonthGrid
@@ -583,24 +629,24 @@ function asRecord(value: unknown) {
                 <div class="flex flex-wrap items-center gap-5">
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-primary"></span>
-                    {{ visibleCounts.NORMAL }} Work Days
+                    {{ visibleCounts.NORMAL }} {{ t('calendar.builder.summary.workDays') }}
                   </div>
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-emerald-500"></span>
-                    {{ visibleCounts.HOLIDAY }} Holidays
+                    {{ visibleCounts.HOLIDAY }} {{ t('calendar.builder.summary.holidays') }}
                   </div>
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-slate-400"></span>
-                    {{ visibleCounts.WEEKEND }} Weekends
+                    {{ visibleCounts.WEEKEND }} {{ t('calendar.builder.summary.weekends') }}
                   </div>
                   <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                     <span class="size-3 rounded-full bg-amber-500"></span>
-                    {{ visibleCounts.WEEKEND_WORK + visibleCounts.COMPANY_DAY_OFF }} Overrides
+                    {{ visibleCounts.WEEKEND_WORK + visibleCounts.COMPANY_DAY_OFF }} {{ t('calendar.builder.summary.overrides') }}
                   </div>
                 </div>
 
                 <UiButton variant="outline" leading-icon="download" @click="exportCsv">
-                  Export to CSV
+                  {{ t('calendar.builder.actions.exportCsv') }}
                 </UiButton>
               </div>
             </div>
@@ -613,18 +659,20 @@ function asRecord(value: unknown) {
       >
         <UiIcon name="info" size="20px" class="mt-0.5 text-emerald-400" :fill="1" />
         <div class="text-sm">
-          <p class="font-bold">Selection Active</p>
+          <p class="font-bold">{{ t('calendar.builder.selection.active') }}</p>
           <p class="mt-1 text-slate-300">
             <template v-if="selectedType === 'CLEAR_DATE'">
-              Clicking dates will remove explicit overrides and leave the date untyped.
+              {{ t('calendar.builder.selection.clearDescription') }}
             </template>
             <template v-else>
-              Clicking dates will assign <span class="text-blue-300">{{ currentSelection.label }}</span>
-              <span v-if="assignmentLabel"> with "{{ assignmentLabel }}"</span>.
+              {{ t('calendar.builder.selection.applyDescription', {
+                type: currentSelection.label,
+                labelSuffix: assignmentLabel ? t('calendar.builder.selection.labelSuffix', { label: assignmentLabel }) : '',
+              }) }}
             </template>
           </p>
           <p v-if="selectedDateLabel" class="mt-1 text-slate-400">
-            Selected date: {{ selectedDateLabel }}
+            {{ t('calendar.builder.selection.selectedDate', { date: selectedDateLabel }) }}
           </p>
         </div>
       </div>

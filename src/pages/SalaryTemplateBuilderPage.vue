@@ -7,6 +7,7 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { salaryService, type SalaryTemplateRequest, type SalaryTemplateDetailRequest, type SelectionOptionResponse } from '@/services/salary.service'
+import { useI18n } from '@/i18n'
 import { AppRoute } from '@/types'
 
 const loading = ref(false)
@@ -14,6 +15,7 @@ const loadingOptions = ref(false)
 const error = ref('')
 const message = ref('')
 const router = useRouter()
+const { t } = useI18n()
 
 type SalaryTemplateForm = Omit<SalaryTemplateRequest, 'details' | 'description' | 'currency'> & {
   description: string
@@ -36,7 +38,7 @@ const template = ref<SalaryTemplateForm>({
 const salaryCodeOptions = ref<{ value: string; label: string }[]>([])
 const unitOptions = ref<{ value: string; label: string }[]>([])
 const dependencySalaryOptions = computed(() => [
-  { value: '', label: 'No dependency' },
+  { value: '', label: t('salaryTemplates.builder.noDependency') },
   ...salaryCodeOptions.value,
 ])
 
@@ -82,9 +84,9 @@ async function submit() {
       await router.push(AppRoute.PAYROLL_TEMPLATES)
       return
     }
-    error.value = `Create salary template returned unexpected status: ${res?.status ?? 'unknown'}`
+    error.value = t('salaryTemplates.builder.unexpectedStatus', { status: res?.status ?? 'unknown' })
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Create salary template failed'
+    error.value = e?.response?.data?.message ?? t('salaryTemplates.builder.createFailed')
   } finally {
     loading.value = false
   }
@@ -125,7 +127,7 @@ async function loadOptions() {
           : '',
     }))
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Failed to load salary/unit options'
+    error.value = e?.response?.data?.message ?? t('salaryTemplates.builder.loadOptionsFailed')
   } finally {
     loadingOptions.value = false
   }
@@ -138,12 +140,12 @@ onMounted(loadOptions)
   <AppLayout>
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold">Salary Template Builder</h1>
+        <h1 class="text-2xl font-bold">{{ t('salaryTemplates.builder.title') }}</h1>
         <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">POST /api/salary-templates</p>
       </div>
       <div class="flex gap-3">
-        <UiButton variant="outline" @click="addDetail">Add detail</UiButton>
-        <UiButton variant="primary" :disabled="loading" @click="submit">Save</UiButton>
+        <UiButton variant="outline" @click="addDetail">{{ t('salaryTemplates.builder.addDetail') }}</UiButton>
+        <UiButton variant="primary" :disabled="loading" @click="submit">{{ t('common.action.save') }}</UiButton>
       </div>
     </div>
 
@@ -153,41 +155,41 @@ onMounted(loadOptions)
         <div v-if="message" class="text-sm text-green-600">{{ message }}</div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiInput v-model="template.name" label="Template Name" required />
-          <UiInput v-model="template.currency" label="Currency" />
-          <UiInput v-model="template.totalAmount" label="Total Amount" required disabled hint="Auto-calculated from detail amounts" />
-          <UiInput v-model="template.description" label="Description" />
-          <UiInput v-model="template.effectiveFrom" label="Effective From" type="date" required />
-          <UiInput v-model="template.effectiveTo" label="Effective To" type="date" required />
+          <UiInput v-model="template.name" :label="t('salaryTemplates.builder.fields.templateName')" required />
+          <UiInput v-model="template.currency" :label="t('common.field.currency')" />
+          <UiInput v-model="template.totalAmount" :label="t('common.field.totalAmount')" required disabled :hint="t('salaryTemplates.builder.fields.totalAmountHint')" />
+          <UiInput v-model="template.description" :label="t('common.field.description')" />
+          <UiInput v-model="template.effectiveFrom" :label="t('common.field.effectiveFrom')" type="date" required />
+          <UiInput v-model="template.effectiveTo" :label="t('common.field.effectiveTo')" type="date" required />
         </div>
 
         <div class="border-t border-primary/10 pt-6">
           <div class="flex items-center justify-between mb-3">
-            <h2 class="font-bold">Details</h2>
+            <h2 class="font-bold">{{ t('salaryTemplates.builder.details') }}</h2>
           </div>
 
           <div class="space-y-4">
             <div v-for="(d, i) in details" :key="i" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end border-b border-primary/10 pb-4">
               <div class="md:col-span-3">
-                <UiSelect v-model="d.salaryCode" label="Salary Code" :options="salaryCodeOptions" :disabled="loadingOptions" required />
+                <UiSelect v-model="d.salaryCode" :label="t('salaryTemplates.builder.fields.salaryCode')" :options="salaryCodeOptions" :disabled="loadingOptions" required />
               </div>
               <div class="md:col-span-3">
-                <UiSelect v-model="d.dependencyCode" label="Dependency Salary" :options="dependencySalaryOptions" :disabled="loadingOptions" />
+                <UiSelect v-model="d.dependencyCode" :label="t('salaryTemplates.builder.fields.dependencySalary')" :options="dependencySalaryOptions" :disabled="loadingOptions" />
               </div>
               <div class="md:col-span-2">
-                <UiInput v-model="d.amount" label="Amount" required />
+                <UiInput v-model="d.amount" :label="t('common.field.amount')" required />
               </div>
               <div class="md:col-span-1">
-                <UiInput v-model="d.quantity" label="Quantity" required />
+                <UiInput v-model="d.quantity" :label="t('common.field.quantity')" required />
               </div>
               <div class="md:col-span-1">
-                <UiSelect v-model="d.unitCode" label="Unit" :options="unitOptions" :disabled="loadingOptions" required />
+                <UiSelect v-model="d.unitCode" :label="t('common.field.unit')" :options="unitOptions" :disabled="loadingOptions" required />
               </div>
               <div class="md:col-span-1">
-                <UiInput v-model="d.sequenceOrder" label="Sequence Order" required />
+                <UiInput v-model="d.sequenceOrder" :label="t('salaryTemplates.builder.fields.sequenceOrder')" required />
               </div>
               <div class="md:col-span-1 flex items-center justify-end">
-                <button type="button" class="text-slate-500 hover:text-red-500" @click="removeDetail(i)">
+                <button type="button" class="text-slate-500 hover:text-red-500" :title="t('common.action.delete')" @click="removeDetail(i)">
                   <UiIcon name="delete" />
                 </button>
               </div>

@@ -100,7 +100,7 @@ function homeForRole(role: RoleCode | null) {
             <UiInput
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="••••••••"
+              :placeholder="t('login.passwordPlaceholder')"
               required
               autocomplete="current-password"
               name="password"

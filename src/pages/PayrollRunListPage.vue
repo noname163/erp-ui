@@ -10,6 +10,7 @@ import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
+import { useI18n } from '@/i18n'
 import { payrollRunService, type PayrollRunStatus } from '@/services/payroll-run.service'
 import { AppRoute } from '@/types'
 
@@ -26,6 +27,7 @@ type PayrollRunRow = {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const pageSize = 8
 
@@ -55,21 +57,21 @@ const appliedFilters = ref({
 
 const rows = ref<PayrollRunRow[]>([])
 
-const headers: UiTableHeader[] = [
-  { key: 'status', label: 'Status', thClass: 'min-w-[150px]' },
-  { key: 'runAt', label: 'Run At', thClass: 'min-w-[170px]' },
-  { key: 'closeAt', label: 'Close At', thClass: 'min-w-[170px]' },
-  { key: 'runBy', label: 'Run By', thClass: 'min-w-[180px]' },
-  { key: 'updatedBy', label: 'Updated By', thClass: 'min-w-[180px]' },
-  { key: 'actions', label: 'Actions', align: 'right', thClass: 'min-w-[220px]' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'status', label: t('payrollRuns.headers.status'), thClass: 'min-w-[150px]' },
+  { key: 'runAt', label: t('payrollRuns.headers.runAt'), thClass: 'min-w-[170px]' },
+  { key: 'closeAt', label: t('payrollRuns.headers.closeAt'), thClass: 'min-w-[170px]' },
+  { key: 'runBy', label: t('payrollRuns.headers.runBy'), thClass: 'min-w-[180px]' },
+  { key: 'updatedBy', label: t('payrollRuns.headers.updatedBy'), thClass: 'min-w-[180px]' },
+  { key: 'actions', label: t('payrollRuns.headers.actions'), align: 'right', thClass: 'min-w-[220px]' },
+])
 
-const statusOptions = [
-  { value: 'ALL', label: 'Status: All' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'CALCULATED', label: 'Calculated' },
-  { value: 'CLOSED', label: 'Close' },
-]
+const statusOptions = computed(() => [
+  { value: 'ALL', label: t('payrollRuns.statusOptions.all') },
+  { value: 'OPEN', label: t('payrollRuns.statusOptions.open') },
+  { value: 'CALCULATED', label: t('payrollRuns.statusOptions.calculated') },
+  { value: 'CLOSED', label: t('payrollRuns.statusOptions.close') },
+])
 
 const filteredRows = computed(() => {
   const query = appliedFilters.value.search.trim().toLowerCase()
@@ -151,7 +153,7 @@ async function loadPayrollRuns() {
       .sort((left, right) => (toTimestamp(right.runAt) ?? 0) - (toTimestamp(left.runAt) ?? 0))
   } catch (error: any) {
     rows.value = []
-    loadError.value = error?.response?.data?.message ?? 'Unable to load payroll runs from API.'
+    loadError.value = error?.response?.data?.message ?? t('payrollRuns.messages.loadFailed')
   } finally {
     loading.value = false
   }
@@ -165,7 +167,7 @@ async function refreshPayrollRuns() {
 async function runPayroll() {
   if (!selectedRunDate.value) {
     actionTone.value = 'error'
-    actionMessage.value = 'Select a payroll month before running payroll.'
+    actionMessage.value = t('payrollRuns.messages.selectMonth')
     return
   }
 
@@ -176,11 +178,11 @@ async function runPayroll() {
   try {
     const response = await payrollRunService.run(selectedRunDate.value)
     actionTone.value = 'success'
-    actionMessage.value = resolveActionMessage(response?.data, 'Payroll run started successfully.')
+    actionMessage.value = resolveActionMessage(response?.data, t('payrollRuns.messages.runStarted'))
     await loadPayrollRuns()
   } catch (error: any) {
     actionTone.value = 'error'
-    actionMessage.value = error?.response?.data?.message ?? 'Unable to start payroll run.'
+    actionMessage.value = error?.response?.data?.message ?? t('payrollRuns.messages.startFailed')
   } finally {
     runningPayroll.value = false
   }
@@ -241,10 +243,10 @@ function statusIcon(currentStatus: PayrollRunStatus) {
 }
 
 function statusLabel(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'OPEN') return 'Running'
-  if (currentStatus === 'CALCULATED') return 'Calculated'
-  if (currentStatus === 'FAILED') return 'Failed'
-  return 'OPEN'
+  if (currentStatus === 'OPEN') return t('payrollRuns.statusLabels.running')
+  if (currentStatus === 'CALCULATED') return t('payrollRuns.statusLabels.calculated')
+  if (currentStatus === 'FAILED') return t('payrollRuns.statusLabels.failed')
+  return t('payrollRuns.statusLabels.open')
 }
 
 function formatDate(value: string | null) {
@@ -273,9 +275,9 @@ function formatTime(value: string | null) {
 
 function closeAtLabel(row: PayrollRunRow) {
   if (row.closeAt) return formatDate(row.closeAt)
-  if (row.status === 'OPEN') return 'In progress...'
-  if (row.status === 'CALCULATED') return 'Not closed'
-  return 'Unavailable'
+  if (row.status === 'OPEN') return t('payrollRuns.messages.inProgress')
+  if (row.status === 'CALCULATED') return t('payrollRuns.messages.notClosed')
+  return t('payrollRuns.messages.unavailable')
 }
 
 function closeAtTimeLabel(row: PayrollRunRow) {
@@ -479,18 +481,18 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
 
           <div class="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div class="max-w-2xl space-y-3 text-white">
-              <p class="text-xs font-bold uppercase tracking-[0.35em] text-blue-100/90">Payroll / Payruns</p>
+              <p class="text-xs font-bold uppercase tracking-[0.35em] text-blue-100/90">{{ t('payrollRuns.eyebrow') }}</p>
               <div class="space-y-2">
-                <h1 class="text-3xl font-black tracking-[-0.03em] md:text-4xl">Payroll Runs</h1>
+                <h1 class="text-3xl font-black tracking-[-0.03em] md:text-4xl">{{ t('payrollRuns.title') }}</h1>
                 <p class="max-w-xl text-sm text-blue-50/90 md:text-base">
-                  Monitor payroll execution windows, track run ownership, and trigger the next payroll cycle from one screen.
+                  {{ t('payrollRuns.subtitle') }}
                 </p>
               </div>
             </div>
 
             <div class="flex flex-wrap items-end gap-3">
               <div class="w-full sm:w-[190px]">
-                <p class="pb-1.5 text-xs font-bold uppercase tracking-[0.2em] text-blue-100/90">Run Month</p>
+                <p class="pb-1.5 text-xs font-bold uppercase tracking-[0.2em] text-blue-100/90">{{ t('payrollRuns.fields.runMonth') }}</p>
                 <UiInput
                   v-model="selectedRunMonthYear"
                   type="month"
@@ -503,14 +505,14 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 :disabled="loading || runningPayroll"
                 @click="refreshPayrollRuns"
               >
-                Refresh
+                {{ t('common.action.refresh') }}
               </UiButton>
               <UiButton
                 leading-icon="play_arrow"
                 :disabled="!canRunPayroll"
                 @click="runPayroll"
               >
-                {{ runningPayroll ? 'Running Payroll...' : 'Run Payroll' }}
+                {{ runningPayroll ? t('payrollRuns.actions.runningPayroll') : t('payrollRuns.actions.runPayroll') }}
               </UiButton>
             </div>
           </div>
@@ -536,7 +538,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
           <UiCardBody>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Total Payruns</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollRuns.stats.totalPayruns') }}</p>
                 <p class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ totalRuns }}</p>
               </div>
               <div class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -550,7 +552,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
           <UiCardBody>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Running Now</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollRuns.stats.runningNow') }}</p>
                 <p class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ runningRuns }}</p>
               </div>
               <div class="flex size-12 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-600">
@@ -564,7 +566,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
           <UiCardBody>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Completed</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollRuns.stats.completed') }}</p>
                 <p class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ completedRuns }}</p>
               </div>
               <div class="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
@@ -578,7 +580,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
           <UiCardBody>
             <div class="flex items-center justify-between gap-4">
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Failed</p>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollRuns.stats.failed') }}</p>
                 <p class="mt-2 text-3xl font-black text-slate-900 dark:text-white">{{ failedRuns }}</p>
               </div>
               <div class="flex size-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600">
@@ -595,39 +597,39 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
             <div class="xl:col-span-4">
               <UiInput
                 v-model="search"
-                label="Search Payruns"
-                placeholder="Search by code, status, or owner..."
+                :label="t('payrollRuns.fields.searchPayruns')"
+                :placeholder="t('payrollRuns.fields.searchPlaceholder')"
                 leading-icon="search"
                 @keyup.enter="applyFilters"
               />
             </div>
 
             <div class="xl:col-span-2">
-              <UiSelect v-model="status" label="Status" :options="statusOptions" />
+              <UiSelect v-model="status" :label="t('payrollRuns.headers.status')" :options="statusOptions" />
             </div>
 
             <div class="xl:col-span-3">
-              <p class="ui-label">Run At Range</p>
+              <p class="ui-label">{{ t('payrollRuns.fields.runAtRange') }}</p>
               <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <UiInput v-model="runAtFrom" type="date" />
-                <span class="text-sm text-slate-400">to</span>
+                <span class="text-sm text-slate-400">{{ t('logWorkList.filters.to') }}</span>
                 <UiInput v-model="runAtTo" type="date" />
               </div>
             </div>
 
             <div class="xl:col-span-3">
-              <p class="ui-label">Close At Range</p>
+              <p class="ui-label">{{ t('payrollRuns.fields.closeAtRange') }}</p>
               <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                 <UiInput v-model="closeAtFrom" type="date" />
-                <span class="text-sm text-slate-400">to</span>
+                <span class="text-sm text-slate-400">{{ t('logWorkList.filters.to') }}</span>
                 <UiInput v-model="closeAtTo" type="date" />
               </div>
             </div>
           </div>
 
           <div class="mt-4 flex flex-wrap justify-end gap-2">
-            <UiButton variant="outline" @click="resetFilters">Reset Filters</UiButton>
-            <UiButton leading-icon="filter_list" @click="applyFilters">Apply Filters</UiButton>
+            <UiButton variant="outline" @click="resetFilters">{{ t('payrollRuns.actions.resetFilters') }}</UiButton>
+            <UiButton leading-icon="filter_list" @click="applyFilters">{{ t('payrollRuns.actions.applyFilters') }}</UiButton>
           </div>
         </UiCardBody>
       </UiCard>
@@ -635,7 +637,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
       <UiCard>
         <div class="p-4 md:p-6">
           <div v-if="loading" class="rounded-xl bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/60">
-            Loading payroll runs...
+            {{ t('payrollRuns.messages.loading') }}
           </div>
 
           <UiTable
@@ -647,7 +649,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
             row-class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
             th-base-class="px-4 md:px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-slate-500"
             td-base-class="px-4 md:px-6 py-4 text-sm"
-            empty-text="No payroll runs match the current filters."
+            :empty-text="t('payrollRuns.messages.empty')"
           >
             <template #cell-status="{ row }">
               <div class="space-y-2">
@@ -672,7 +674,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 <p class="font-semibold text-slate-900 dark:text-white">{{ formatDate(row.runAt) }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ formatTime(row.runAt) }}</p>
               </div>
-              <p v-else class="text-sm text-slate-500 dark:text-slate-400">Not started</p>
+              <p v-else class="text-sm text-slate-500 dark:text-slate-400">{{ t('payrollRuns.messages.notStarted') }}</p>
             </template>
 
             <template #cell-closeAt="{ row }">
@@ -713,7 +715,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 <button
                   type="button"
                   class="rounded-lg border border-primary/15 p-2 text-slate-500 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                  title="Refresh payroll runs"
+                  :title="t('payrollRuns.messages.refreshTitle')"
                   :disabled="loading || runningPayroll"
                   @click="refreshPayrollRuns"
                 >
@@ -722,11 +724,11 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                 <button
                   type="button"
                   class="inline-flex items-center gap-2 rounded-lg border border-primary/15 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                  title="View payroll run details"
+                  :title="t('payrollRuns.messages.viewTitle')"
                   @click="viewPayrollRunDetails(row)"
                 >
                   <UiIcon name="visibility" size="18" />
-                  <span>View detail</span>
+                  <span>{{ t('payrollRuns.actions.viewDetail') }}</span>
                 </button>
               </div>
             </template>
@@ -737,14 +739,14 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                   <UiIcon name="receipt_long" />
                 </div>
                 <div class="space-y-1">
-                  <p class="font-semibold text-slate-900 dark:text-white">No payroll runs found</p>
+                  <p class="font-semibold text-slate-900 dark:text-white">{{ t('payrollRuns.messages.emptyTitle') }}</p>
                   <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Create the next payroll cycle or clear the current filters.
+                    {{ t('payrollRuns.messages.emptyDescription') }}
                   </p>
                 </div>
                 <div class="flex flex-wrap justify-center gap-2">
-                  <UiButton variant="outline" @click="resetFilters">Clear Filters</UiButton>
-                  <UiButton leading-icon="play_arrow" :disabled="!canRunPayroll" @click="runPayroll">Run Payroll</UiButton>
+                  <UiButton variant="outline" @click="resetFilters">{{ t('payrollRuns.actions.clearFilters') }}</UiButton>
+                  <UiButton leading-icon="play_arrow" :disabled="!canRunPayroll" @click="runPayroll">{{ t('payrollRuns.actions.runPayroll') }}</UiButton>
                 </div>
               </div>
             </template>
@@ -753,17 +755,11 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
 
         <div class="flex flex-col gap-3 border-t border-primary/10 px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            Showing
-            <span class="font-bold text-slate-900 dark:text-white">{{ pageStart }}</span>
-            to
-            <span class="font-bold text-slate-900 dark:text-white">{{ pageEnd }}</span>
-            of
-            <span class="font-bold text-slate-900 dark:text-white">{{ filteredRows.length }}</span>
-            payruns
+            {{ t('payrollRuns.messages.showing', { start: pageStart, end: pageEnd, total: filteredRows.length }) }}
           </p>
 
           <div class="flex items-center gap-2">
-            <UiButton variant="outline" :disabled="page <= 1" @click="setPage(page - 1)">Previous</UiButton>
+            <UiButton variant="outline" :disabled="page <= 1" @click="setPage(page - 1)">{{ t('common.action.previous') }}</UiButton>
 
             <template v-for="(pageNumber, index) in pageButtons" :key="`${pageNumber}-${index}`">
               <span v-if="pageNumber === '...'" class="px-1 text-slate-400">...</span>
@@ -777,7 +773,7 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
               </UiButton>
             </template>
 
-            <UiButton variant="outline" :disabled="page >= totalPages" @click="setPage(page + 1)">Next</UiButton>
+            <UiButton variant="outline" :disabled="page >= totalPages" @click="setPage(page + 1)">{{ t('common.action.next') }}</UiButton>
           </div>
         </div>
       </UiCard>

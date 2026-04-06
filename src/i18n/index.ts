@@ -38,14 +38,15 @@ export function persistLocale(locale: SupportedLocale) {
 export function setLocale(locale: SupportedLocale) {
   activeLocale.value = locale
   persistLocale(locale)
+  syncDocumentLocale(locale)
 }
 
-export function t(key: string): string {
+export function t(key: string, params?: Record<string, string | number>): string {
   const message = resolvePath(messages[activeLocale.value], key)
-  if (typeof message === 'string') return message
+  if (typeof message === 'string') return interpolate(message, params)
 
   const fallback = resolvePath(messages.en, key)
-  return typeof fallback === 'string' ? fallback : key
+  return typeof fallback === 'string' ? interpolate(fallback, params) : key
 }
 
 export function useI18n() {
@@ -66,3 +67,18 @@ function resolvePath(target: unknown, key: string): unknown {
     return undefined
   }, target)
 }
+
+function interpolate(message: string, params?: Record<string, string | number>) {
+  if (!params) return message
+
+  return Object.entries(params).reduce((result, [token, value]) => {
+    return result.replaceAll(`{${token}}`, String(value))
+  }, message)
+}
+
+function syncDocumentLocale(locale: SupportedLocale) {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = locale
+}
+
+syncDocumentLocale(activeLocale.value)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "@/i18n";
 import {
   createAssignmentMap,
-  formatMonthLabel,
   parseMonthKey,
   resolveCalendarDay,
 } from "@/services/calendar.service";
@@ -31,12 +31,21 @@ const props = withDefaults(defineProps<Props>(), {
   interactive: false,
   selectedDate: null,
 });
+const { t, locale } = useI18n();
 
 const emit = defineEmits<{
   (e: "select-day", date: string): void;
 }>();
 
-const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdayLabels = computed(() => [
+  t("calendar.weekday.mon"),
+  t("calendar.weekday.tue"),
+  t("calendar.weekday.wed"),
+  t("calendar.weekday.thu"),
+  t("calendar.weekday.fri"),
+  t("calendar.weekday.sat"),
+  t("calendar.weekday.sun"),
+]);
 
 const assignmentMap = computed(() => createAssignmentMap(props.assignments));
 
@@ -70,7 +79,13 @@ const cells = computed<CalendarCell[]>(() => {
   });
 });
 
-const monthLabel = computed(() => formatMonthLabel(props.month, props.compact));
+const monthLabel = computed(() => {
+  const localeTag = locale.value === "zh-TW" ? "zh-TW" : locale.value;
+  return new Intl.DateTimeFormat(localeTag, {
+    month: props.compact ? "short" : "long",
+    year: "numeric",
+  }).format(parseMonthKey(props.month));
+});
 
 function cardClass(cell: CalendarCell) {
   if (!cell.inMonth) {
@@ -119,7 +134,7 @@ function selectDay(cell: CalendarCell) {
     <div v-if="compact" class="flex items-center justify-between px-1">
       <h4 class="text-sm font-bold text-slate-900 dark:text-white">{{ monthLabel }}</h4>
       <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-        {{ interactive ? "Editable" : "Preview" }}
+        {{ interactive ? t("calendar.monthGrid.editable") : t("calendar.monthGrid.preview") }}
       </span>
     </div>
 
@@ -129,7 +144,7 @@ function selectDay(cell: CalendarCell) {
           v-for="day in weekdayLabels"
           :key="`${month}-header-${day}`"
           class="bg-white px-2 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:bg-slate-950"
-          :class="day === 'Sat' || day === 'Sun' ? 'text-amber-600 dark:text-amber-400' : ''"
+          :class="day === t('calendar.weekday.sat') || day === t('calendar.weekday.sun') ? 'text-amber-600 dark:text-amber-400' : ''"
         >
           {{ day }}
         </div>

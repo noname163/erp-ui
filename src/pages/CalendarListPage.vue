@@ -20,9 +20,11 @@ import type {
   CompanyCalendarListResponse,
   CompanyCalendarPagedResponse,
 } from "@/services/calendar.service";
+import { useI18n } from "@/i18n";
 import { AppRoute } from "@/types";
 
 const router = useRouter();
+const { t } = useI18n();
 
 const loading = ref(false);
 const error = ref("");
@@ -38,25 +40,25 @@ const rows = ref<CalendarRecord[]>([]);
 const totalElements = ref(0);
 const totalPages = ref(1);
 
-const headers: UiTableHeader[] = [
-  { key: "code", label: "Code", thClass: "min-w-[120px]" },
-  { key: "name", label: "Name", thClass: "min-w-[220px]" },
-  { key: "effectiveFrom", label: "Effective From" },
-  { key: "effectiveTo", label: "Effective To" },
-  { key: "region", label: "Region", thClass: "min-w-[140px]" },
-  { key: "timezone", label: "Time Zone", thClass: "min-w-[170px]" },
-  { key: "createdBy", label: "Created By", thClass: "min-w-[180px]" },
-  { key: "note", label: "Note", thClass: "min-w-[260px]" },
-  { key: "actions", label: "Actions", align: "right" },
-];
+const headers = computed<UiTableHeader[]>(() => [
+  { key: "code", label: t("common.field.code"), thClass: "min-w-[120px]" },
+  { key: "name", label: t("common.field.name"), thClass: "min-w-[220px]" },
+  { key: "effectiveFrom", label: t("common.field.effectiveFrom") },
+  { key: "effectiveTo", label: t("common.field.effectiveTo") },
+  { key: "region", label: t("common.field.region"), thClass: "min-w-[140px]" },
+  { key: "timezone", label: t("common.field.timezone"), thClass: "min-w-[170px]" },
+  { key: "createdBy", label: t("common.field.createdBy"), thClass: "min-w-[180px]" },
+  { key: "note", label: t("common.field.note"), thClass: "min-w-[260px]" },
+  { key: "actions", label: t("common.field.actions"), align: "right" },
+]);
 
-const timeZoneOptions = [
-  { value: "ALL", label: "Time zone: All" },
+const timeZoneOptions = computed(() => [
+  { value: "ALL", label: t("calendar.list.timezoneAll") },
   ...calendarTimezoneOptions.map((item) => ({
     value: item.value,
     label: item.label,
   })),
-];
+]);
 
 const visibleCount = computed(() => rows.value.length);
 const hasActiveFilters = computed(
@@ -104,7 +106,7 @@ async function loadCalendars() {
     rows.value = [];
     totalElements.value = 0;
     totalPages.value = 1;
-    error.value = e?.response?.data?.message ?? "Unable to load calendars.";
+    error.value = e?.response?.data?.message ?? t("calendar.list.loadFailed");
   } finally {
     loading.value = false;
   }
@@ -114,7 +116,7 @@ onMounted(loadCalendars);
 
 function normalizeCalendarRow(item: CompanyCalendarListResponse, index: number): CalendarRecord {
   const code = String(item?.code ?? `CAL-${String(index + 1).padStart(3, "0")}`);
-  const creator = String(item?.createdBy ?? "System");
+  const creator = String(item?.createdBy ?? t("policies.list.authorship.createdByFallback"));
 
   return {
     id: code,
@@ -122,9 +124,9 @@ function normalizeCalendarRow(item: CompanyCalendarListResponse, index: number):
     name: String(item?.name ?? ""),
     effectiveFrom: String(item?.effectiveFrom ?? ""),
     effectiveTo: item?.effectiveTo ? String(item.effectiveTo) : null,
-    region: String(item?.region ?? "-"),
-    timezone: String(item?.timeZone ?? "-"),
-    note: item?.note ? String(item.note) : "—",
+    region: String(item?.region ?? t("common.state.notAvailable")),
+    timezone: String(item?.timeZone ?? t("common.state.notAvailable")),
+    note: item?.note ? String(item.note) : t("common.state.notAvailable"),
     createdBy: {
       name: creator,
       role: "",
@@ -197,15 +199,15 @@ function viewCalendar(row: CalendarRecord) {
   <AppLayout>
     <div class="mx-auto max-w-[1600px] space-y-8">
       <CalendarPageHeader
-        :eyebrow="['Organization', 'Management', 'Calendars']"
-        title="Company Calendars"
+        :eyebrow="[t('calendar.list.eyebrow.organization'), t('calendar.list.eyebrow.management'), t('calendar.list.eyebrow.calendars')]"
+        :title="t('calendar.list.title')"
       >
         <template #actions>
           <UiButton variant="outline" leading-icon="filter_list" @click="toggleFilters">
-            Filter
+            {{ t('calendar.list.filters.filter') }}
           </UiButton>
           <UiButton leading-icon="add" @click="router.push(AppRoute.CALENDAR_BUILDER)">
-            Create Calendar
+            {{ t('calendar.list.filters.createCalendar') }}
           </UiButton>
         </template>
       </CalendarPageHeader>
@@ -216,14 +218,14 @@ function viewCalendar(row: CalendarRecord) {
             <UiInput
               v-model="nameFilter"
               leading-icon="search"
-              placeholder="Search calendar names..."
+              :placeholder="t('calendar.list.searchPlaceholder')"
             />
           </div>
           <div class="lg:col-span-3">
             <UiInput
               v-model="regionFilter"
               leading-icon="public"
-              placeholder="Filter by region..."
+              :placeholder="t('calendar.list.regionPlaceholder')"
             />
           </div>
           <div class="lg:col-span-4">
@@ -232,8 +234,8 @@ function viewCalendar(row: CalendarRecord) {
 
           <div class="flex items-center justify-end lg:col-span-12">
             <div class="flex flex-wrap gap-3">
-              <UiButton variant="outline" @click="resetFilters">Reset</UiButton>
-              <UiButton leading-icon="search" @click="applyFilters">Apply</UiButton>
+              <UiButton variant="outline" @click="resetFilters">{{ t('common.action.reset') }}</UiButton>
+              <UiButton leading-icon="search" @click="applyFilters">{{ t('common.action.apply') }}</UiButton>
             </div>
           </div>
         </UiCardBody>
@@ -243,14 +245,14 @@ function viewCalendar(row: CalendarRecord) {
         <UiCard>
           <UiCardBody>
             <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Total Active
+              {{ t('calendar.list.stats.totalActive') }}
             </p>
             <div class="mt-2 flex items-baseline gap-2">
               <span class="text-3xl font-black tracking-[-0.03em] text-slate-900 dark:text-white">
                 {{ totalElements }}
               </span>
               <span class="text-xs font-bold text-emerald-600">
-                {{ visibleRegions }} regions
+                {{ t('calendar.list.stats.regions', { count: visibleRegions }) }}
               </span>
             </div>
           </UiCardBody>
@@ -259,13 +261,13 @@ function viewCalendar(row: CalendarRecord) {
         <UiCard>
           <UiCardBody>
             <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Open-ended
+              {{ t('calendar.list.stats.openEnded') }}
             </p>
             <div class="mt-2 flex items-baseline gap-2">
               <span class="text-3xl font-black tracking-[-0.03em] text-slate-900 dark:text-white">
                 {{ openEndedCount }}
               </span>
-              <span class="text-xs font-bold text-amber-600">Visible now</span>
+              <span class="text-xs font-bold text-amber-600">{{ t('calendar.list.stats.visibleNow') }}</span>
             </div>
           </UiCardBody>
         </UiCard>
@@ -274,13 +276,13 @@ function viewCalendar(row: CalendarRecord) {
           <UiCardBody class="flex items-center justify-between gap-4">
             <div>
               <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
-                Time Zone Coverage
+                {{ t('calendar.list.stats.timezoneCoverage') }}
               </p>
               <p class="mt-2 text-2xl font-bold tracking-[-0.03em] text-slate-900 dark:text-white">
-                {{ timezoneCoverage.length }} active zones
+                {{ t('calendar.list.stats.activeZones', { count: timezoneCoverage.length }) }}
               </p>
               <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {{ timezoneCoverage.length ? timezoneCoverage.slice(0, 3).join(" • ") : "No calendars returned for the current filters." }}
+                {{ timezoneCoverage.length ? timezoneCoverage.slice(0, 3).join(" • ") : t('calendar.list.stats.noCoverage') }}
               </p>
             </div>
             <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -293,7 +295,7 @@ function viewCalendar(row: CalendarRecord) {
       <UiCard class="overflow-visible">
         <div class="p-0">
           <div v-if="error" class="px-4 py-4 text-sm text-amber-600 md:px-6">{{ error }}</div>
-          <div v-if="loading" class="px-4 py-4 text-sm text-slate-500 md:px-6">Loading calendars...</div>
+          <div v-if="loading" class="px-4 py-4 text-sm text-slate-500 md:px-6">{{ t('calendar.list.loading') }}</div>
 
           <UiTable
             v-else
@@ -306,6 +308,7 @@ function viewCalendar(row: CalendarRecord) {
             table-class="min-w-[1280px]"
             head-class="bg-slate-50/80 dark:bg-slate-800/60"
             head-row-class="border-b border-primary/10"
+            :empty-text="t('calendar.list.empty')"
           >
             <template #cell-code="{ row }">
               <span class="font-mono text-xs font-bold text-primary">
@@ -331,7 +334,7 @@ function viewCalendar(row: CalendarRecord) {
                     : 'italic text-slate-400 dark:text-slate-500'
                 "
               >
-                {{ row.effectiveTo ?? "—" }}
+                {{ row.effectiveTo ?? t('calendar.list.stats.openEnded') }}
               </span>
             </template>
 
@@ -390,25 +393,21 @@ function viewCalendar(row: CalendarRecord) {
                       "
                     >
                       <UiIcon name="visibility" size="18px" />
-                      <span>View</span>
+                      <span>{{ t('common.action.view') }}</span>
                     </button>
 
                     <button
                       type="button"
                       disabled
                       class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 dark:text-slate-600"
-                      title="Delete endpoint is not configured"
+                      :title="t('calendar.list.menu.deleteNotConfigured')"
                     >
                       <UiIcon name="delete" size="18px" />
-                      <span>Delete</span>
+                      <span>{{ t('common.action.delete') }}</span>
                     </button>
                   </template>
                 </UiDropdownMenu>
               </div>
-            </template>
-
-            <template #empty>
-              <div class="py-10 text-sm text-slate-500">No calendars found.</div>
             </template>
           </UiTable>
         </div>
@@ -416,7 +415,7 @@ function viewCalendar(row: CalendarRecord) {
         <div class="border-t border-primary/10 px-4 py-4 md:px-6">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Showing {{ visibleCount }} of {{ totalElements }} calendars
+              {{ t('calendar.list.showing', { visible: visibleCount, total: totalElements }) }}
             </p>
 
             <div class="flex items-center gap-2">
@@ -446,17 +445,17 @@ function viewCalendar(row: CalendarRecord) {
           <div class="relative p-6 md:p-8">
             <div class="relative z-10 max-w-xl">
               <h2 class="text-2xl font-bold tracking-[-0.03em] text-white">
-                Automate Recurring Holidays
+                {{ t('calendar.list.cards.automateTitle') }}
               </h2>
               <p class="mt-3 text-sm text-slate-300">
-                Sync region-specific holidays into operational calendars so staffing plans and delivery timelines stay aligned.
+                {{ t('calendar.list.cards.automateDescription') }}
               </p>
               <button
                 type="button"
                 class="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
               >
                 <UiIcon name="sync" size="18px" />
-                Configure Sync
+                {{ t('calendar.list.actions.configureSync') }}
               </button>
             </div>
 
@@ -471,12 +470,12 @@ function viewCalendar(row: CalendarRecord) {
             <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <UiIcon name="history" size="22px" />
             </div>
-            <h3 class="mt-4 text-lg font-bold text-slate-900 dark:text-white">Audit Logs</h3>
+            <h3 class="mt-4 text-lg font-bold text-slate-900 dark:text-white">{{ t('calendar.list.cards.auditTitle') }}</h3>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              View recent modifications to company calendar policies.
+              {{ t('calendar.list.cards.auditDescription') }}
             </p>
             <button type="button" class="mt-5 text-sm font-semibold text-primary hover:underline">
-              View History
+              {{ t('calendar.list.actions.viewHistory') }}
             </button>
           </UiCardBody>
         </UiCard>

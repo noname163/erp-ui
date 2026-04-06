@@ -12,6 +12,7 @@ import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { dailyWorkService, type EmployeeDailyWorkListResponse } from '@/services/daily-work.service'
 import { userProfileService } from '@/services/user-profile.service'
+import { useI18n } from '@/i18n'
 import { AppRoute } from '@/types'
 
 type SelectOption = { value: string; label: string }
@@ -34,6 +35,7 @@ type LogWorkRow = {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const loading = ref(false)
 const loadingEmployees = ref(false)
@@ -43,7 +45,11 @@ const pageSize = 8
 const totalElements = ref(0)
 const totalPages = ref(1)
 
-const employeeOptions = ref<SelectOption[]>([{ value: '', label: 'All Employees' }])
+function defaultEmployeeOption(): SelectOption {
+  return { value: '', label: t('logWorkList.filters.allEmployees') }
+}
+
+const employeeOptions = ref<SelectOption[]>([defaultEmployeeOption()])
 const rows = ref<LogWorkRow[]>([])
 
 const employeeCode = ref('')
@@ -58,16 +64,16 @@ const applied = ref({
   usedPto: false,
 })
 
-const headers: UiTableHeader[] = [
-  { key: 'employee', label: 'Employee', thClass: 'min-w-[240px]' },
-  { key: 'logDay', label: 'Log Day', thClass: 'min-w-[140px]' },
-  { key: 'timeRange', label: 'Start/End', thClass: 'min-w-[130px]' },
-  { key: 'otTime', label: 'OT Time', thClass: 'min-w-[120px]' },
-  { key: 'usedPto', label: 'Used PTO', align: 'center', thClass: 'min-w-[110px]' },
-  { key: 'createdBy', label: 'Created By', thClass: 'min-w-[140px]' },
-  { key: 'editedBy', label: 'Edited By', thClass: 'min-w-[140px]' },
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'employee', label: t('common.field.employee'), thClass: 'min-w-[240px]' },
+  { key: 'logDay', label: t('logWorkList.headers.logDay'), thClass: 'min-w-[140px]' },
+  { key: 'timeRange', label: t('common.field.timeRange'), thClass: 'min-w-[130px]' },
+  { key: 'otTime', label: t('common.field.otTime'), thClass: 'min-w-[120px]' },
+  { key: 'usedPto', label: t('logWork.fields.usedPto'), align: 'center', thClass: 'min-w-[110px]' },
+  { key: 'createdBy', label: t('common.field.createdBy'), thClass: 'min-w-[140px]' },
+  { key: 'editedBy', label: t('logWorkList.headers.editedBy'), thClass: 'min-w-[140px]' },
   { key: 'actions', label: '', align: 'right', thClass: 'w-16' },
-]
+])
 
 const seedRows: LogWorkRow[] = []
 
@@ -92,7 +98,7 @@ function initials(name: string) {
 
 function normalizeEmployeeOptions(res: any): SelectOption[] {
   const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
-  if (!Array.isArray(raw)) return [{ value: '', label: 'All Employees' }]
+  if (!Array.isArray(raw)) return [defaultEmployeeOption()]
   const mapped = raw
     .map((item: any) => {
       const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
@@ -102,7 +108,7 @@ function normalizeEmployeeOptions(res: any): SelectOption[] {
     })
     .filter((item: SelectOption | null): item is SelectOption => Boolean(item))
 
-  return [{ value: '', label: 'All Employees' }, ...mapped]
+  return [defaultEmployeeOption(), ...mapped]
 }
 
 function normalizeRow(item: EmployeeDailyWorkListResponse, index: number): LogWorkRow {
@@ -133,7 +139,7 @@ async function loadEmployeeOptions() {
     employeeOptions.value = normalizeEmployeeOptions(res)
     console.log('Loaded employee options:', employeeOptions.value)
   } catch {
-    employeeOptions.value = [{ value: '', label: 'All Employees' }]
+    employeeOptions.value = [defaultEmployeeOption()]
   } finally {
     loadingEmployees.value = false
   }
@@ -174,7 +180,7 @@ async function loadRows() {
     totalElements.value = rows.value.length
     totalPages.value = 1
     currentPage.value = 1
-    error.value = e?.response?.data?.message ?? 'Unable to load working logs from API. Showing sample data.'
+    error.value = e?.response?.data?.message ?? t('logWorkList.loadFailed')
   } finally {
     loading.value = false
   }
@@ -263,7 +269,7 @@ function exportCsv() {
     row.startTime,
     row.endTime,
     row.otTime,
-    row.usedPto ? 'Yes' : 'No',
+    row.usedPto ? t('common.status.yes') : t('common.status.no'),
     row.createdBy,
     row.editedBy,
   ])
@@ -287,16 +293,16 @@ function exportCsv() {
     <div class="space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Working Logs</h1>
+          <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{{ t('navigation.workingLogs') }}</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage and export employee attendance and overtime records.
+            {{ t('logWorkList.subtitle') }}
           </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <UiButton variant="outline" leadingIcon="filter_alt" @click="applyFilters">More Filters</UiButton>
-          <UiButton variant="outline" leadingIcon="add" @click="router.push(AppRoute.LOG_WORK)">Add Log</UiButton>
-          <UiButton variant="primary" leadingIcon="download" @click="exportCsv">Export Logs</UiButton>
+          <UiButton variant="outline" leadingIcon="filter_alt" @click="applyFilters">{{ t('logWorkList.actions.moreFilters') }}</UiButton>
+          <UiButton variant="outline" leadingIcon="add" @click="router.push(AppRoute.LOG_WORK)">{{ t('logWorkList.actions.addLog') }}</UiButton>
+          <UiButton variant="primary" leadingIcon="download" @click="exportCsv">{{ t('logWorkList.actions.exportLogs') }}</UiButton>
         </div>
       </div>
 
@@ -305,34 +311,34 @@ function exportCsv() {
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] gap-4 items-end">
             <UiSelect
               v-model="employeeCode"
-              label="Employee Code"
+              :label="t('common.field.employeeCode')"
               :options="employeeOptions"
               :disabled="loadingEmployees"
             />
 
             <div>
-              <p class="ui-label">Date Range</p>
+              <p class="ui-label">{{ t('common.field.dateRange') }}</p>
               <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                 <UiInput v-model="workingDateFrom" type="date" />
-                <span class="text-slate-400 text-sm">to</span>
+                <span class="text-slate-400 text-sm">{{ t('logWorkList.filters.to') }}</span>
                 <UiInput v-model="workingDateTo" type="date" />
               </div>
             </div>
 
             <div class="pb-2">
-              <UiCheckbox v-model="usedPto" label="Is PTO" />
+              <UiCheckbox v-model="usedPto" :label="t('logWorkList.filters.isPto')" />
             </div>
 
             <div class="flex items-center gap-2 pb-2">
               <button
                 type="button"
                 class="p-2 text-slate-400 hover:text-primary transition-colors"
-                title="Refresh"
+                :title="t('logWorkList.actions.refresh')"
                 @click="loadRows"
               >
                 <UiIcon name="refresh" size="20" />
               </button>
-              <UiButton variant="primary" leadingIcon="search" @click="applyFilters">Apply</UiButton>
+              <UiButton variant="primary" leadingIcon="search" @click="applyFilters">{{ t('common.action.apply') }}</UiButton>
             </div>
           </div>
         </UiCardBody>
@@ -341,7 +347,7 @@ function exportCsv() {
       <UiCard>
         <div class="p-4 md:p-6">
           <div v-if="error" class="text-sm text-amber-600 dark:text-amber-400 mb-4">{{ error }}</div>
-          <div v-if="loading" class="text-sm text-slate-500">Loading working logs...</div>
+          <div v-if="loading" class="text-sm text-slate-500">{{ t('logWorkList.loading') }}</div>
 
           <UiTable
             v-else
@@ -352,7 +358,7 @@ function exportCsv() {
             row-class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
             th-base-class="px-4 md:px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider"
             td-base-class="px-4 md:px-6 py-4 whitespace-nowrap"
-            empty-text="No working logs found"
+            :empty-text="t('logWorkList.empty')"
           >
             <template #cell-employee="{ row }">
               <div class="flex items-center gap-3">
@@ -415,7 +421,7 @@ function exportCsv() {
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                   "
                 >
-                  {{ row.usedPto ? 'Yes' : 'No' }}
+                  {{ row.usedPto ? t('common.status.yes') : t('common.status.no') }}
                 </span>
               </div>
             </template>
@@ -453,9 +459,7 @@ function exportCsv() {
 
         <div class="px-4 md:px-6 py-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <p class="text-xs text-slate-500 dark:text-slate-400">
-            Showing <span class="font-bold text-slate-900 dark:text-white">{{ pageStart }}</span> to
-            <span class="font-bold text-slate-900 dark:text-white">{{ pageEnd }}</span> of
-            <span class="font-bold text-slate-900 dark:text-white">{{ totalElements }}</span> entries
+            {{ t('logWorkList.showing', { start: pageStart, end: pageEnd, total: totalElements }) }}
           </p>
 
           <div class="flex items-center gap-2">
