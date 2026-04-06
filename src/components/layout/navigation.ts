@@ -1,7 +1,7 @@
 import { AppRoute, type RoleCode } from '@/types'
 
 export type AppNavItem = {
-  label: string
+  labelKey: string
   icon: string
   to: string
   roles?: RoleCode[]
@@ -10,92 +10,92 @@ export type AppNavItem = {
 
 export const appNavItems: AppNavItem[] = [
   {
-    label: 'Dashboard',
+    labelKey: 'navigation.dashboard',
     icon: 'dashboard',
     to: AppRoute.DASHBOARD,
     roles: ['SYSTEM_ADMIN', 'ADMIN', 'COMPANY_MANAGER'],
   },
   {
-    label: 'Calendars',
+    labelKey: 'navigation.calendars',
     icon: 'calendar_today',
     to: AppRoute.CALENDARS,
     roles: ['SYSTEM_ADMIN', 'ADMIN', 'COMPANY_MANAGER', 'HUMAN_RESOURCES'],
   },
   {
-    label: 'Companies',
+    labelKey: 'navigation.companies',
     icon: 'business',
     to: AppRoute.COMPANIES,
     roles: ['SYSTEM_ADMIN', 'ADMIN'],
   },
   {
-    label: 'Departments',
+    labelKey: 'navigation.departments',
     icon: 'apartment',
     to: AppRoute.DEPARTMENTS,
     roles: ['SYSTEM_ADMIN', 'ADMIN', 'COMPANY_MANAGER'],
   },
   {
-    label: 'HR Overview',
+    labelKey: 'navigation.hrOverview',
     icon: 'group',
     to: AppRoute.HR_OVERVIEW,
     roles: ['HUMAN_RESOURCES'],
   },
   {
-    label: 'Employee Directory',
+    labelKey: 'navigation.employeeDirectory',
     icon: 'badge',
     to: AppRoute.EMPLOYEES,
     roles: ['SYSTEM_ADMIN', 'ADMIN', 'HUMAN_RESOURCES', 'COMPANY_MANAGER'],
   },
   {
-    label: 'Policy Management',
+    labelKey: 'navigation.policyManagement',
     icon: 'gavel',
     to: AppRoute.PAYROLL_TEMPLATES,
     roles: ['HUMAN_RESOURCES'],
   },
   {
-    label: 'New Policy',
+    labelKey: 'navigation.newPolicy',
     icon: 'add_circle',
     to: AppRoute.PAYROLL_BUILDER,
     roles: ['HUMAN_RESOURCES'],
     hidden: true,
   },
   {
-    label: 'Payroll Components',
+    labelKey: 'navigation.payrollComponents',
     icon: 'tune',
     to: AppRoute.PAYROLL_COMPONENTS,
     roles: ['HUMAN_RESOURCES'],
   },
   {
-    label: 'Payroll Runs',
+    labelKey: 'navigation.payrollRuns',
     icon: 'payments',
     to: AppRoute.PAYROLL_RUNS,
     roles: ['HUMAN_RESOURCES'],
   },
   {
-    label: 'Payroll Results',
+    labelKey: 'navigation.payrollResults',
     icon: 'table_view',
     to: AppRoute.PAYROLL_RESULTS,
     roles: ['HUMAN_RESOURCES'],
   },
   {
-    label: 'Salary Slips',
+    labelKey: 'navigation.salarySlips',
     icon: 'receipt_long',
     to: AppRoute.SALARY_SLIP_LIST,
     roles: ['HUMAN_RESOURCES', 'COMPANY_MANAGER', 'EMPLOYEE'],
   },
   {
-    label: 'Authentication',
+    labelKey: 'navigation.authentication',
     icon: 'verified_user',
     to: AppRoute.RESET_PASSWORD,
     hidden: true,
   },
   {
-    label: 'Working Logs',
+    labelKey: 'navigation.workingLogs',
     icon: 'history',
     to: AppRoute.LOG_WORK_LIST,
     roles: ['EMPLOYEE', 'HUMAN_RESOURCES'],
   },
   {
-    label: 'Bulk Log Work',
+    labelKey: 'navigation.bulkLogWork',
     icon: 'playlist_add',
     to: AppRoute.BULK_LOG_WORK,
     roles: ['HUMAN_RESOURCES'],
