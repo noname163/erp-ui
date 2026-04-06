@@ -9,6 +9,7 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import UiInlineInput from '@/components/ui/UiInlineInput.vue'
 import UiInlineSelect from '@/components/ui/UiInlineSelect.vue'
+import { useI18n } from '@/i18n'
 import { employeeSalaryService, type EmployeeSalarySlipDetailRequest, type EmployeeSalarySlipRequest } from '@/services/employee-salary.service'
 import { salaryService, type SelectionOptionResponse } from '@/services/salary.service'
 import { userProfileService } from '@/services/user-profile.service'
@@ -17,6 +18,7 @@ import { AppRoute } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const loading = ref(false)
 const loadingOptions = ref(false)
 const loadingTemplateDetails = ref(false)
@@ -29,14 +31,14 @@ const LS_DRAFT = 'erp.salarySlip.draft'
 
 type SelectOption = { value: string; label: string }
 
-const dayTypeOptions: SelectOption[] = [
-    { value: 'NORMAL', label: 'Normal' },
-    { value: 'HOLIDAY_WORK', label: 'Holiday Work' },
-    { value: 'WEEKEND_WORK', label: 'Weekend Work' },
-    { value: 'PTO_PAID', label: 'PTO Paid' },
-    { value: 'PTO_UNPAID', label: 'PTO Unpaid' },
-    { value: 'UNPAID_LEAVE', label: 'Unpaid Leave' },
-]
+const dayTypeOptions = computed<SelectOption[]>(() => [
+    { value: 'NORMAL', label: t('logWork.options.workType.normal') },
+    { value: 'HOLIDAY_WORK', label: t('logWork.options.workType.holidayWork') },
+    { value: 'WEEKEND_WORK', label: t('logWork.options.workType.weekendWork') },
+    { value: 'PTO_PAID', label: t('logWork.options.workType.ptoPaid') },
+    { value: 'PTO_UNPAID', label: t('logWork.options.workType.ptoUnpaid') },
+    { value: 'UNPAID_LEAVE', label: t('logWork.options.workType.unpaidLeave') },
+])
 
 const currencyOptions = [
     { value: 'USD', label: 'USD - US Dollar' },
@@ -50,7 +52,7 @@ const salaryTemplateOptions = ref<SelectOption[]>([])
 const salaryCodeOptions = ref<SelectOption[]>([])
 const selectedSalaryTemplateCode = ref('')
 const dependencySalaryOptions = computed<SelectOption[]>(() => [
-    { value: '', label: 'No dependency' },
+    { value: '', label: t('salarySlips.builder.dependency.none') },
     ...salaryCodeOptions.value,
 ])
 
@@ -149,7 +151,7 @@ const canSubmit = computed(() => {
 
 async function createSlip() {
     if (!canSubmit.value) {
-        error.value = 'Please fill in all required fields before submitting.'
+        error.value = t('salarySlips.builder.messages.requiredFields')
         return
     }
     loading.value = true
@@ -158,13 +160,12 @@ async function createSlip() {
     try {
         var response = await employeeSalaryService.createSlip(compiledPayload.value)
         localStorage.removeItem(LS_DRAFT)
-        message.value = 'Employee salary entry submitted'
-        console.log('Created salary slip:', response)
+        message.value = t('salarySlips.builder.messages.submitted')
         if(response.success==true){
             router.push(AppRoute.SALARY_SLIP_LIST)
         }
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Create employee salary slip failed'
+        error.value = e?.response?.data?.message ?? t('salarySlips.builder.messages.createFailed')
     } finally {
         loading.value = false
     }
@@ -241,7 +242,7 @@ async function loadSelectionOptions() {
             addDetail()
         }
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Failed to load options'
+        error.value = e?.response?.data?.message ?? t('salarySlips.builder.messages.loadOptionsFailed')
     } finally {
         loadingOptions.value = false
     }
@@ -257,7 +258,7 @@ async function onTemplateChange(code: string) {
         const templateDetails = normalizeTemplateDetails(res)
         details.value = templateDetails.length > 0 ? templateDetails : [createEmptyDetail()]
     } catch (e: any) {
-        error.value = e?.response?.data?.message ?? 'Failed to load template details'
+        error.value = e?.response?.data?.message ?? t('salarySlips.builder.messages.loadTemplateDetailsFailed')
     } finally {
         loadingTemplateDetails.value = false
     }
@@ -285,9 +286,9 @@ function saveDraft() {
             details: details.value,
             selectedSalaryTemplateCode: selectedSalaryTemplateCode.value,
         }))
-        message.value = 'Draft saved locally'
+        message.value = t('salarySlips.builder.messages.draftSaved')
     } catch {
-        error.value = 'Failed to save draft'
+        error.value = t('salarySlips.builder.messages.draftSaveFailed')
     }
 }
 
@@ -373,14 +374,30 @@ watch(
     },
 )
 
-const tableHeaders: UiTableHeader[] = [
-    { key: 'salaryCode', label: 'Salary Code', thClass: 'w-1/5' },
-    { key: 'dayType', label: 'Day Type', thClass: 'w-1/5' },
-    { key: 'dependencyCode', label: 'Dependency Salary', thClass: 'w-1/5' },
-    { key: 'amount', label: 'Amount', thClass: 'w-1/6' },
-    { key: 'remark', label: 'Remarks/Specific Details', thClass: 'w-1/4' },
-    { key: 'action', label: 'Action', align: 'center', thClass: 'w-16' },
-]
+const routePrefillMessage = computed(() => {
+    const parts: string[] = []
+    if (routeEmployeeCode.value) {
+        parts.push(t('salarySlips.builder.messages.viewingEmployee', { code: routeEmployeeCode.value }))
+    }
+    if (routePeriod.value) {
+        parts.push(t('salarySlips.builder.messages.viewingPeriod', { period: routePeriod.value }))
+    }
+
+    return t('salarySlips.builder.messages.viewingPayrollResult', {
+        employee: parts[0] ?? '',
+        separator: parts.length > 1 ? t('salarySlips.builder.messages.separator') : '',
+        period: parts.length > 1 ? parts[1] : parts[0] ? '' : parts[0] ?? '',
+    })
+})
+
+const tableHeaders = computed<UiTableHeader[]>(() => [
+    { key: 'salaryCode', label: t('salarySlips.builder.fields.salaryCode'), thClass: 'w-1/5' },
+    { key: 'dayType', label: t('salarySlips.builder.fields.dayType'), thClass: 'w-1/5' },
+    { key: 'dependencyCode', label: t('salarySlips.builder.fields.dependencySalary'), thClass: 'w-1/5' },
+    { key: 'amount', label: t('common.field.amount'), thClass: 'w-1/6' },
+    { key: 'remark', label: t('salarySlips.builder.fields.remark'), thClass: 'w-1/4' },
+    { key: 'action', label: t('common.field.actions'), align: 'center', thClass: 'w-16' },
+])
 </script>
 
 <template>
@@ -388,63 +405,59 @@ const tableHeaders: UiTableHeader[] = [
         <div class="max-w-5xl mx-auto px-2 md:px-0 py-2 md:py-0">
             <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">Employee
-                        Salaries Entry</h1>
+                    <h1 class="text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">{{ t('salarySlips.builder.title') }}</h1>
                     <p class="text-slate-500 dark:text-slate-400 text-base mt-1">
-                        Manage and record individual employee salary components and effective dates.
+                        {{ t('salarySlips.builder.subtitle') }}
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <UiButton variant="outline" leadingIcon="close" :disabled="loading" @click="router.push(AppRoute.SALARY_SLIP_LIST)">Cancel
+                    <UiButton variant="outline" leadingIcon="close" :disabled="loading" @click="router.push(AppRoute.SALARY_SLIP_LIST)">{{ t('common.action.cancel') }}
                     </UiButton>
-                    <UiButton variant="primary" leadingIcon="save" :disabled="loading" @click="createSlip">Save Entry
+                    <UiButton variant="primary" leadingIcon="save" :disabled="loading" @click="createSlip">{{ t('salarySlips.builder.actions.saveEntry') }}
                     </UiButton>
                 </div>
             </div>
 
             <div v-if="error" class="mb-4 text-sm text-red-500">{{ error }}</div>
             <div v-if="message" class="mb-4 text-sm text-green-600">{{ message }}</div>
-            <div v-if="loadingOptions" class="mb-4 text-sm text-slate-500">Loading options...</div>
+            <div v-if="loadingOptions" class="mb-4 text-sm text-slate-500">{{ t('salarySlips.builder.messages.loadingOptions') }}</div>
             <div v-if="hasRoutePrefill" class="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
-                Viewing payroll result detail with
-                <span v-if="routeEmployeeCode" class="font-semibold"> employee {{ routeEmployeeCode }}</span>
-                <span v-if="routeEmployeeCode && routePeriod"> and </span>
-                <span v-if="routePeriod" class="font-semibold">period {{ routePeriod }}</span>
+                {{ routePrefillMessage }}
             </div>
 
             <div class="ui-card mb-8 overflow-visible">
                 <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center gap-2">
                     <UiIcon name="info" class="text-primary" />
-                    <h2 class="text-slate-900 dark:text-white text-lg font-bold">General Information</h2>
+                    <h2 class="text-slate-900 dark:text-white text-lg font-bold">{{ t('salarySlips.builder.sections.generalInformation') }}</h2>
                 </div>
                 <div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-6">
                     <div class="sm:col-span-2 lg:col-span-4">
-                        <UiSelect v-model="master.userProfileCode" label="Employee" required
-                            placeholder="Select Employee (Name / ID)" :options="employeeOptions" :disabled="loadingOptions" />
+                        <UiSelect v-model="master.userProfileCode" :label="t('salarySlips.builder.fields.employee')" required
+                            :placeholder="t('salarySlips.builder.fields.employeePlaceholder')" :options="employeeOptions" :disabled="loadingOptions" />
                     </div>
                     <div class="lg:col-span-3">
                         <UiSelect
                             v-model="selectedSalaryTemplateCode"
-                            label="Salary Template"
-                            placeholder="Select template"
+                            :label="t('salarySlips.builder.fields.salaryTemplate')"
+                            :placeholder="t('salarySlips.builder.fields.salaryTemplatePlaceholder')"
                             :options="salaryTemplateOptions"
                             :disabled="loadingOptions || loadingTemplateDetails"
                             @update:modelValue="onTemplateChange"
                         />
                     </div>
                     <div class="lg:col-span-2">
-                        <UiSelect v-model="master.currency" label="Currency" required :options="currencyOptions" />
+                        <UiSelect v-model="master.currency" :label="t('common.field.currency')" required :options="currencyOptions" />
                     </div>
                     <div class="sm:col-span-2 lg:col-span-3">
-                        <UiInput :model-value="totalAmount" label="Total Amount (Auto)" disabled
-                            hint="Auto-calculated from salary details" />
+                        <UiInput :model-value="totalAmount" :label="t('salarySlips.builder.fields.totalAmountAuto')" disabled
+                            :hint="t('salarySlips.builder.fields.totalAmountHint')" />
                     </div>
 
                     <div class="lg:col-span-3">
-                        <UiInput v-model="master.effectiveFrom" label="Effective From" type="date" required />
+                        <UiInput v-model="master.effectiveFrom" :label="t('common.field.effectiveFrom')" type="date" required />
                     </div>
                     <div class="lg:col-span-3">
-                        <UiInput v-model="master.effectiveTo" label="Effective To" type="date" required />
+                        <UiInput v-model="master.effectiveTo" :label="t('common.field.effectiveTo')" type="date" required />
                     </div>
                 </div>
             </div>
@@ -454,32 +467,32 @@ const tableHeaders: UiTableHeader[] = [
                     class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <UiIcon name="payments" class="text-primary" />
-                        <h2 class="text-slate-900 dark:text-white text-lg font-bold">Salary Details</h2>
+                        <h2 class="text-slate-900 dark:text-white text-lg font-bold">{{ t('salarySlips.builder.sections.salaryDetails') }}</h2>
                     </div>
-                    <UiButton variant="outline" leadingIcon="add" :disabled="loading || loadingTemplateDetails || loadingOptions" @click="addDetail">Add New Row
+                    <UiButton variant="outline" leadingIcon="add" :disabled="loading || loadingTemplateDetails || loadingOptions" @click="addDetail">{{ t('salarySlips.builder.actions.addNewRow') }}
                     </UiButton>
                 </div>
 
                 <UiTable :headers="tableHeaders" :rows="details" :row-key="(_, i) => i"
                     head-class="bg-slate-50 dark:bg-slate-900/50" body-class="divide-slate-100 dark:divide-slate-800"
                     row-class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
-                    empty-text="No salary details. Add a row to begin.">
+                    :empty-text="t('salarySlips.builder.messages.emptyDetails')">
                     <template #cell-salaryCode="{ row, index }">
                         <UiInlineSelect v-model="details[index].salaryCode" :options="salaryCodeOptions"
-                            placeholder="Select salary code" />
+                            :placeholder="t('salarySlips.builder.placeholders.selectSalaryCode')" />
                     </template>
 
                     <template #cell-dayType="{ index }">
                         <UiInlineSelect
                             v-model="details[index].dayType"
                             :options="dayTypeOptions"
-                            placeholder="Select work type"
+                            :placeholder="t('salarySlips.builder.placeholders.selectWorkType')"
                         />
                     </template>
 
                     <template #cell-dependencyCode="{ index }">
                         <UiInlineSelect v-model="details[index].dependencyCode" :options="dependencySalaryOptions"
-                            placeholder="Select dependency" />
+                            :placeholder="t('salarySlips.builder.placeholders.selectDependency')" />
                     </template>
 
                     <template #cell-amount="{ index }">
@@ -488,7 +501,7 @@ const tableHeaders: UiTableHeader[] = [
 
                     <template #cell-remark="{ index }">
                         <UiInlineInput v-model="details[index].remark" type="text"
-                            placeholder="Add specific details..." />
+                            :placeholder="t('salarySlips.builder.placeholders.remark')" />
                     </template>
                     
                     <template #cell-action="{ index }">
@@ -501,7 +514,7 @@ const tableHeaders: UiTableHeader[] = [
 
                 <div class="p-6 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
                     <div class="text-right">
-                        <p class="text-xs font-bold text-slate-500 uppercase">Sub-Total</p>
+                        <p class="text-xs font-bold text-slate-500 uppercase">{{ t('salarySlips.builder.fields.subTotal') }}</p>
                         <p class="text-2xl font-black text-primary">{{ totalAmount }}</p>
                     </div>
                 </div>
@@ -515,26 +528,25 @@ const tableHeaders: UiTableHeader[] = [
                     </div>
                     <div>
                         <p class="text-sm font-bold text-slate-800 dark:text-white">
-                            {{ canSubmit ? 'Form Validation Passed' : 'Validation Needed' }}
+                            {{ canSubmit ? t('salarySlips.builder.messages.validationPassed') : t('salarySlips.builder.messages.validationNeeded') }}
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            {{ canSubmit ? 'Ready to POST to /api/employee-salaries' : 'Please complete required fields before submitting.' }}
+                            {{ canSubmit ? t('salarySlips.builder.messages.readyToPost') : t('salarySlips.builder.messages.completeRequired') }}
                         </p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <UiButton variant="outline" leadingIcon="description" :disabled="loading" @click="saveDraft">Save
-                        Draft
+                    <UiButton variant="outline" leadingIcon="description" :disabled="loading" @click="saveDraft">{{ t('salarySlips.builder.actions.saveDraft') }}
                     </UiButton>
                     <UiButton variant="primary" leadingIcon="send" :disabled="loading || !canSubmit"
                         @click="createSlip">
-                        Submit Final Entry
+                        {{ t('salarySlips.builder.actions.submitFinalEntry') }}
                     </UiButton>
                 </div>
             </div>
 
             <div class="mt-6">
-                <UiBadge variant="info" icon="info">Amounts are summed as strings to avoid floating point issues.
+                <UiBadge variant="info" icon="info">{{ t('salarySlips.builder.messages.precisionNote') }}
                 </UiBadge>
             </div>
         </div>

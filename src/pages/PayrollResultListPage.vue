@@ -10,6 +10,7 @@ import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
+import { useI18n } from '@/i18n'
 import { payrollResultService, type PayrollResultSourceType } from '@/services/payroll-result.service'
 import { AppRoute } from '@/types'
 
@@ -35,21 +36,22 @@ type PayrollResultRow = {
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
-const headers: UiTableHeader[] = [
-  { key: 'period', label: 'Period', thClass: 'min-w-[140px]' },
-  { key: 'createdAt', label: 'Created At', thClass: 'min-w-[190px]' },
-  { key: 'salaryName', label: 'Salary Name', thClass: 'min-w-[160px]' },
-  { key: 'employee', label: 'Employee', thClass: 'min-w-[220px]' },
-  { key: 'amount', label: 'Expected vs Actual (Amt)', align: 'right', thClass: 'min-w-[220px]' },
-  { key: 'currency', label: 'Currency', align: 'center', thClass: 'min-w-[100px]' },
-  { key: 'qty', label: 'Qty (Exp / Act)', align: 'right', thClass: 'min-w-[160px]' },
-  { key: 'unit', label: 'Unit', thClass: 'min-w-[110px]' },
-  { key: 'sourceType', label: 'Source', thClass: 'min-w-[130px]' },
-  { key: 'retro', label: 'Retro', thClass: 'min-w-[100px]' },
-  { key: 'retroReason', label: 'Retro Reason', thClass: 'min-w-[220px]' },
-  { key: 'actions', label: 'Actions', align: 'right', thClass: 'min-w-[110px]' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'period', label: t('payrollResults.headers.period'), thClass: 'min-w-[140px]' },
+  { key: 'createdAt', label: t('payrollResults.headers.createdAt'), thClass: 'min-w-[190px]' },
+  { key: 'salaryName', label: t('payrollResults.headers.salaryName'), thClass: 'min-w-[160px]' },
+  { key: 'employee', label: t('payrollResults.headers.employee'), thClass: 'min-w-[220px]' },
+  { key: 'amount', label: t('payrollResults.headers.amount'), align: 'right', thClass: 'min-w-[220px]' },
+  { key: 'currency', label: t('payrollResults.headers.currency'), align: 'center', thClass: 'min-w-[100px]' },
+  { key: 'qty', label: t('payrollResults.headers.qty'), align: 'right', thClass: 'min-w-[160px]' },
+  { key: 'unit', label: t('payrollResults.headers.unit'), thClass: 'min-w-[110px]' },
+  { key: 'sourceType', label: t('payrollResults.headers.source'), thClass: 'min-w-[130px]' },
+  { key: 'retro', label: t('payrollResults.headers.retro'), thClass: 'min-w-[100px]' },
+  { key: 'retroReason', label: t('payrollResults.headers.retroReason'), thClass: 'min-w-[220px]' },
+  { key: 'actions', label: t('common.field.actions'), align: 'right', thClass: 'min-w-[110px]' },
+])
 
 const createdDate = ref('')
 const sourceType = ref<'ALL' | PayrollResultSourceType>('ALL')
@@ -61,13 +63,13 @@ const loading = ref(false)
 const error = ref('')
 const rows = ref<PayrollResultRow[]>([])
 
-const sourceTypeOptions = [
-  { value: 'ALL', label: 'All Sources' },
-  { value: 'RUNNING', label: 'Running' },
-  { value: 'PREVIEW', label: 'Preview' },
-  { value: 'FINALIZED', label: 'Finalized' },
-  { value: 'ADJUSTMENT', label: 'Adjustment' },
-]
+const sourceTypeOptions = computed(() => [
+  { value: 'ALL', label: t('payrollResults.sourceTypeOptions.all') },
+  { value: 'RUNNING', label: t('payrollResults.sourceTypeOptions.running') },
+  { value: 'PREVIEW', label: t('payrollResults.sourceTypeOptions.preview') },
+  { value: 'FINALIZED', label: t('payrollResults.sourceTypeOptions.finalized') },
+  { value: 'ADJUSTMENT', label: t('payrollResults.sourceTypeOptions.adjustment') },
+])
 
 const lineOptions = [
   { value: '10', label: '10' },
@@ -194,7 +196,7 @@ async function loadRows() {
       })
   } catch (err: any) {
     rows.value = []
-    error.value = err?.response?.data?.message ?? 'Unable to load payroll results from API.'
+    error.value = err?.response?.data?.message ?? t('payrollResults.messages.loadFailed')
   } finally {
     loading.value = false
   }
@@ -244,6 +246,13 @@ function sourceVariant(value: PayrollResultSourceType) {
   if (value === 'FINALIZED') return 'success' as const
   if (value === 'ADJUSTMENT') return 'warning' as const
   return 'info' as const
+}
+
+function sourceLabel(value: PayrollResultSourceType) {
+  if (value === 'RUNNING') return t('payrollResults.sourceTypeOptions.running')
+  if (value === 'FINALIZED') return t('payrollResults.sourceTypeOptions.finalized')
+  if (value === 'ADJUSTMENT') return t('payrollResults.sourceTypeOptions.adjustment')
+  return t('payrollResults.sourceTypeOptions.preview')
 }
 
 function retroVariant(value: boolean) {
@@ -305,7 +314,11 @@ function varianceClass(row: PayrollResultRow) {
 }
 
 function paginationSummary() {
-  return `Showing ${pageStart.value} - ${pageEnd.value} of ${filteredRows.value.length} results`
+  return t('payrollResults.messages.pagination', {
+    start: pageStart.value,
+    end: pageEnd.value,
+    total: filteredRows.value.length,
+  })
 }
 
 function normalizeCollection(payload: unknown): Record<string, unknown>[] {
@@ -551,47 +564,46 @@ function toTimestamp(value: string) {
     <div class="space-y-6">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 class="text-2xl font-black tracking-[-0.02em] text-slate-900 dark:text-white">Payroll Results</h1>
+          <h1 class="text-2xl font-black tracking-[-0.02em] text-slate-900 dark:text-white">{{ t('payrollResults.title') }}</h1>
           <p class="text-sm text-slate-500 dark:text-slate-400">
-            Review finalized outputs, preview batches, live runs, and retro adjustments in one list.
+            {{ t('payrollResults.subtitle') }}
           </p>
         </div>
 
-        <UiButton variant="outline" leading-icon="refresh" :disabled="loading" @click="refresh">Refresh</UiButton>
+        <UiButton variant="outline" leading-icon="refresh" :disabled="loading" @click="refresh">{{ t('common.action.refresh') }}</UiButton>
       </div>
 
       <div
         v-if="activePayrollRunCode"
         class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700"
       >
-        Showing results for payroll run
-        <span class="font-semibold">{{ activePayrollRunCode }}</span>
+        {{ t('payrollResults.filteredByRun', { code: activePayrollRunCode }) }}
       </div>
 
       <UiCard>
         <UiCardBody>
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
             <div class="lg:col-span-3">
-              <UiInput v-model="createdDate" label="Created Date" type="date" />
+              <UiInput v-model="createdDate" :label="t('payrollResults.fields.createdDate')" type="date" />
             </div>
 
             <div class="lg:col-span-3">
-              <UiSelect v-model="sourceType" label="Source Type" :options="sourceTypeOptions" />
+              <UiSelect v-model="sourceType" :label="t('payrollResults.fields.sourceType')" :options="sourceTypeOptions" />
             </div>
 
             <div class="lg:col-span-4">
               <UiInput
                 v-model="employeeQuery"
-                label="Employee Selection"
-                placeholder="Search employee code or name..."
+                :label="t('payrollResults.fields.employeeSelection')"
+                :placeholder="t('payrollResults.fields.employeePlaceholder')"
                 leading-icon="search"
                 @keyup.enter="applyFilters"
               />
             </div>
 
             <div class="lg:col-span-2 flex gap-2">
-              <UiButton class="flex-1" leading-icon="filter_list" @click="applyFilters">Apply</UiButton>
-              <UiButton class="flex-1" variant="outline" @click="resetFilters">Reset</UiButton>
+              <UiButton class="flex-1" leading-icon="filter_list" @click="applyFilters">{{ t('common.action.apply') }}</UiButton>
+              <UiButton class="flex-1" variant="outline" @click="resetFilters">{{ t('common.action.reset') }}</UiButton>
             </div>
           </div>
         </UiCardBody>
@@ -604,7 +616,7 @@ function toTimestamp(value: string) {
           </div>
 
           <div v-if="loading" class="rounded-xl bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:bg-slate-950/60">
-            Loading payroll results...
+            {{ t('payrollResults.messages.loading') }}
           </div>
 
           <UiTable
@@ -616,7 +628,7 @@ function toTimestamp(value: string) {
             row-class="hover:bg-primary/5 transition-colors"
             th-base-class="px-4 md:px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-[0.2em]"
             td-base-class="px-4 md:px-6 py-4 text-sm"
-            empty-text="No payroll results match the current filters."
+            :empty-text="t('payrollResults.messages.empty')"
           >
             <template #cell-period="{ row }">
               <span class="font-medium text-slate-900 dark:text-white">{{ row.period }}</span>
@@ -674,13 +686,13 @@ function toTimestamp(value: string) {
 
             <template #cell-sourceType="{ row }">
               <UiBadge :variant="sourceVariant(row.sourceType)">
-                {{ row.sourceType }}
+                {{ sourceLabel(row.sourceType) }}
               </UiBadge>
             </template>
 
             <template #cell-retro="{ row }">
               <UiBadge :variant="retroVariant(row.isRetro)">
-                {{ row.isRetro ? 'YES' : 'NO' }}
+                {{ row.isRetro ? t('common.status.yes') : t('common.status.no') }}
               </UiBadge>
             </template>
 
@@ -699,7 +711,7 @@ function toTimestamp(value: string) {
                 <button
                   type="button"
                   class="rounded-lg border border-primary/15 p-2 text-slate-500 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                  title="View detail"
+                  :title="t('payrollResults.messages.viewDetail')"
                   @click="viewPayrollResultDetails(row)"
                 >
                   <UiIcon name="visibility" size="18" />
@@ -713,7 +725,7 @@ function toTimestamp(value: string) {
           <p class="text-sm text-slate-500 dark:text-slate-400">{{ paginationSummary() }}</p>
 
           <div class="flex items-center gap-2">
-            <UiButton variant="outline" :disabled="page <= 1" @click="setPage(page - 1)">Previous</UiButton>
+            <UiButton variant="outline" :disabled="page <= 1" @click="setPage(page - 1)">{{ t('common.action.previous') }}</UiButton>
 
             <template v-for="(pageNumber, index) in pageButtons" :key="`${pageNumber}-${index}`">
               <span v-if="pageNumber === '...'" class="px-1 text-slate-400">...</span>
@@ -727,11 +739,11 @@ function toTimestamp(value: string) {
               </UiButton>
             </template>
 
-            <UiButton variant="outline" :disabled="page >= totalPages" @click="setPage(page + 1)">Next</UiButton>
+            <UiButton variant="outline" :disabled="page >= totalPages" @click="setPage(page + 1)">{{ t('common.action.next') }}</UiButton>
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 dark:text-slate-400">Lines per page</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">{{ t('payrollResults.fields.linesPerPage') }}</span>
             <div class="w-24">
               <UiSelect v-model="linesPerPage" :options="lineOptions" />
             </div>
@@ -747,12 +759,12 @@ function toTimestamp(value: string) {
                 <UiIcon name="verified" />
               </div>
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Total Expected</p>
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollResults.cards.totalExpected') }}</p>
                 <h3 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
                   {{ formatSummaryAmount(totalExpected) }}
                 </h3>
                 <p class="mt-1 text-xs font-medium text-green-600">
-                  {{ summaryCurrency ? `Currency: ${summaryCurrency}` : 'Mixed currencies in current filter set' }}
+                  {{ summaryCurrency ? t('payrollResults.messages.currencySingle', { currency: summaryCurrency }) : t('payrollResults.messages.mixedCurrencies') }}
                 </p>
               </div>
             </div>
@@ -766,12 +778,12 @@ function toTimestamp(value: string) {
                 <UiIcon name="account_balance" />
               </div>
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Total Actual</p>
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollResults.cards.totalActual') }}</p>
                 <h3 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
                   {{ formatSummaryAmount(totalActual) }}
                 </h3>
                 <p class="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                  Variance: {{ formatSummaryAmount(variance) }}
+                  {{ t('payrollResults.messages.variance', { amount: formatSummaryAmount(variance) }) }}
                 </p>
               </div>
             </div>
@@ -785,9 +797,9 @@ function toTimestamp(value: string) {
                 <UiIcon name="history" />
               </div>
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Retro Adjustments</p>
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{{ t('payrollResults.cards.retroAdjustments') }}</p>
                 <h3 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">{{ retroCount }}</h3>
-                <p class="mt-1 text-xs font-medium text-rose-600">Requires payroll review before release</p>
+                <p class="mt-1 text-xs font-medium text-rose-600">{{ t('payrollResults.messages.retroReview') }}</p>
               </div>
             </div>
           </UiCardBody>

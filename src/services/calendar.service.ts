@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { t } from "@/i18n";
 
 export type CalendarDayType =
   | "NORMAL"
@@ -119,32 +120,6 @@ export type CompanyCalendarPagedResponse<T> = {
   success?: boolean;
 };
 
-const monthFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  year: "numeric",
-});
-
-const shortMonthFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "numeric",
-});
-
-const displayDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
-  year: "numeric",
-});
-
-const draftSeed: CalendarDraft = {
-  name: "APAC Operations 2026",
-  effectiveFrom: "2026-01-01",
-  effectiveTo: "2026-12-31",
-  region: "THAILAND",
-  timezone: "Asia/Bangkok",
-  description:
-    "Regional operating calendar for warehouse, support, and finance teams. Use date assignments to mark holidays, shutdowns, and weekend coverage.",
-};
-
 const assignmentSeed: CalendarAssignment[] = [];
 
 export const calendarTypeOptions: CalendarTypeOption[] = [
@@ -231,7 +206,14 @@ export const calendarService = {
     };
   },
   createDraft() {
-    return { ...draftSeed };
+    return {
+      name: t("calendar.builder.defaults.name"),
+      effectiveFrom: "2026-01-01",
+      effectiveTo: "2026-12-31",
+      region: "THAILAND",
+      timezone: "Asia/Bangkok",
+      description: t("calendar.builder.defaults.description"),
+    };
   },
   createAssignments() {
     return assignmentSeed.map((item) => ({ ...item }));
@@ -336,11 +318,18 @@ export function getMonthDateKeys(month: string) {
 }
 
 export function formatMonthLabel(month: string, short = false) {
-  return (short ? shortMonthFormatter : monthFormatter).format(parseMonthKey(month));
+  return new Intl.DateTimeFormat(getIntlLocale(), {
+    month: short ? "short" : "long",
+    year: "numeric",
+  }).format(parseMonthKey(month));
 }
 
 export function formatDisplayDate(date: string) {
-  return displayDateFormatter.format(parseDateKey(date));
+  return new Intl.DateTimeFormat(getIntlLocale(), {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(parseDateKey(date));
 }
 
 export function isWeekend(date: string) {
@@ -370,11 +359,23 @@ function toDateKey(date: Date) {
   ].join("-");
 }
 
+function getIntlLocale() {
+  if (typeof document !== "undefined" && document.documentElement.lang) {
+    return document.documentElement.lang;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.language) {
+    return navigator.language;
+  }
+
+  return "en-US";
+}
+
 export function defaultCalendarDateNote(type: CalendarDayType): string {
-  if (type === "NORMAL") return "Working day";
-  if (type === "HOLIDAY") return "Holiday";
-  if (type === "WEEKEND_WORK") return "Weekend work";
-  if (type === "COMPANY_DAY_OFF") return "Company day-off";
-  if (type === "WEEKEND") return "Weekend";
-  return "Working day";
+  if (type === "NORMAL") return t("calendar.dayType.normal.note");
+  if (type === "HOLIDAY") return t("calendar.dayType.holiday.note");
+  if (type === "WEEKEND_WORK") return t("calendar.dayType.weekendWork.note");
+  if (type === "COMPANY_DAY_OFF") return t("calendar.dayType.companyDayOff.note");
+  if (type === "WEEKEND") return t("calendar.dayType.weekend.note");
+  return t("calendar.dayType.normal.note");
 }

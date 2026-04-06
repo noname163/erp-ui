@@ -11,12 +11,14 @@ import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { AppRoute } from '@/types'
 import { salaryService, type SalaryTemplateSummary } from '@/services/salary.service'
+import { useI18n } from '@/i18n'
 
 type SalaryTemplateRow = SalaryTemplateSummary & {
   id: string
 }
 
 const router = useRouter()
+const { t } = useI18n()
 const loading = ref(false)
 const error = ref('')
 const name = ref('')
@@ -30,16 +32,16 @@ const rows = ref<SalaryTemplateRow[]>([])
 const totalElements = ref(0)
 const totalPages = ref(1)
 
-const headers: UiTableHeader[] = [
-  { key: 'name', label: 'Name', thClass: 'min-w-[220px]' },
-  { key: 'description', label: 'Description', thClass: 'min-w-[260px]' },
-  { key: 'effectiveFrom', label: 'Effective From' },
-  { key: 'effectiveTo', label: 'Effective To' },
-  { key: 'currency', label: 'Currency', align: 'center' },
-  { key: 'totalAmount', label: 'Total Amount', align: 'right' },
-  { key: 'createdBy', label: 'Created By' },
-  { key: 'actions', label: 'Actions', align: 'right' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+  { key: 'name', label: t('common.field.name'), thClass: 'min-w-[220px]' },
+  { key: 'description', label: t('common.field.description'), thClass: 'min-w-[260px]' },
+  { key: 'effectiveFrom', label: t('common.field.effectiveFrom') },
+  { key: 'effectiveTo', label: t('common.field.effectiveTo') },
+  { key: 'currency', label: t('common.field.currency'), align: 'center' },
+  { key: 'totalAmount', label: t('common.field.totalAmount'), align: 'right' },
+  { key: 'createdBy', label: t('common.field.createdBy') },
+  { key: 'actions', label: t('common.field.actions'), align: 'right' },
+])
 
 function normalizeRows(data: any[]): SalaryTemplateRow[] {
   return data.map((item: any, index: number) => ({
@@ -77,7 +79,7 @@ async function loadTemplates() {
     rows.value = []
     totalElements.value = 0
     totalPages.value = 1
-    error.value = e?.response?.data?.message ?? 'Unable to load templates from API.'
+    error.value = e?.response?.data?.message ?? t('salaryTemplates.list.loadFailed')
   } finally {
     loading.value = false
   }
@@ -87,18 +89,21 @@ onMounted(loadTemplates)
 
 const currencyOptions = computed(() => {
   const values = Array.from(new Set(rows.value.map((r) => (r.currency ?? 'USD').toUpperCase())))
-  return [{ value: 'ALL', label: 'Currency: All' }, ...values.map((v) => ({ value: v, label: `Currency: ${v}` }))]
+  return [
+    { value: 'ALL', label: t('salaryTemplates.list.currencyAll') },
+    ...values.map((v) => ({ value: v, label: t('salaryTemplates.list.currencyOption', { currency: v }) })),
+  ]
 })
 
 const summaryText = computed(() => {
-  if (totalElements.value === 0) return 'Showing 0 results'
+  if (totalElements.value === 0) return t('salaryTemplates.list.summaryZero')
   const from = (page.value - 1) * pageSize + 1
   const to = Math.min(page.value * pageSize, totalElements.value)
-  return `Showing ${from} to ${to} of ${totalElements.value} results`
+  return t('salaryTemplates.list.summary', { from, to, total: totalElements.value })
 })
 
 function formatDate(value?: string | null) {
-  if (!value) return 'Open-ended'
+  if (!value) return t('salaryTemplates.list.openEnded')
   return value
 }
 
@@ -140,11 +145,11 @@ async function changePage(next: number) {
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold">Salary Templates</h1>
-          <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage payroll template configurations</p>
+          <h1 class="text-2xl font-bold">{{ t('salaryTemplates.list.title') }}</h1>
+          <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">{{ t('salaryTemplates.list.subtitle') }}</p>
         </div>
         <UiButton leading-icon="add" @click="router.push(AppRoute.PAYROLL_BUILDER)">
-          Create Template
+          {{ t('salaryTemplates.list.createTemplate') }}
         </UiButton>
       </div>
 
@@ -152,7 +157,7 @@ async function changePage(next: number) {
         <UiCardBody>
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div class="lg:col-span-4">
-              <UiInput v-model="name" placeholder="Search templates..." leading-icon="search" @keyup.enter="applyFilters" />
+              <UiInput v-model="name" :placeholder="t('salaryTemplates.list.searchPlaceholder')" leading-icon="search" @keyup.enter="applyFilters" />
             </div>
             <div class="lg:col-span-3">
               <UiSelect v-model="currency" :options="currencyOptions" />
@@ -164,8 +169,8 @@ async function changePage(next: number) {
               <UiInput v-model="effectiveTo" type="date" />
             </div>
             <div class="lg:col-span-12 flex justify-end gap-2">
-              <UiButton variant="outline" @click="resetFilters">Reset</UiButton>
-              <UiButton variant="primary" leading-icon="filter_list" @click="applyFilters">Apply</UiButton>
+              <UiButton variant="outline" @click="resetFilters">{{ t('common.action.reset') }}</UiButton>
+              <UiButton variant="primary" leading-icon="filter_list" @click="applyFilters">{{ t('common.action.apply') }}</UiButton>
             </div>
           </div>
         </UiCardBody>
@@ -174,7 +179,7 @@ async function changePage(next: number) {
       <UiCard>
         <div class="p-4 md:p-6">
           <div v-if="error" class="text-sm text-amber-600 dark:text-amber-400 mb-4">{{ error }}</div>
-          <div v-if="loading" class="text-sm text-slate-500">Loading templates...</div>
+          <div v-if="loading" class="text-sm text-slate-500">{{ t('salaryTemplates.list.loading') }}</div>
 
           <UiTable
             v-else
@@ -207,9 +212,9 @@ async function changePage(next: number) {
 
             <template #cell-currency="{ row }">
               <div class="flex justify-center">
-                <UiBadge variant="info">{{ row.currency ?? 'USD' }}</UiBadge>
-              </div>
-            </template>
+              <UiBadge variant="info">{{ row.currency ?? 'USD' }}</UiBadge>
+            </div>
+          </template>
 
             <template #cell-totalAmount="{ row }">
               <span class="font-bold text-slate-900 dark:text-white">{{ formatAmount(row) }}</span>
@@ -226,9 +231,9 @@ async function changePage(next: number) {
 
             <template #cell-actions>
               <div class="flex items-center justify-end gap-2">
-                <UiButton variant="outline" icon-only leading-icon="visibility" />
-                <UiButton variant="outline" icon-only leading-icon="edit" />
-                <UiButton variant="outline" icon-only leading-icon="delete" />
+                <UiButton variant="outline" icon-only leading-icon="visibility" :title="t('common.action.view')" />
+                <UiButton variant="outline" icon-only leading-icon="edit" :title="t('common.action.edit')" />
+                <UiButton variant="outline" icon-only leading-icon="delete" :title="t('common.action.delete')" />
               </div>
             </template>
           </UiTable>
@@ -236,9 +241,9 @@ async function changePage(next: number) {
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-4 border-t border-primary/10 mt-2">
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ summaryText }}</p>
             <div class="flex items-center gap-2">
-              <UiButton variant="outline" :disabled="page <= 1 || loading" @click="changePage(page - 1)">Previous</UiButton>
-              <span class="text-sm text-slate-600 dark:text-slate-300">Page {{ page }} / {{ totalPages }}</span>
-              <UiButton variant="outline" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">Next</UiButton>
+              <UiButton variant="outline" :disabled="page <= 1 || loading" @click="changePage(page - 1)">{{ t('common.action.previous') }}</UiButton>
+              <span class="text-sm text-slate-600 dark:text-slate-300">{{ t('common.pagination.pageOf', { page, total: totalPages }) }}</span>
+              <UiButton variant="outline" :disabled="page >= totalPages || loading" @click="changePage(page + 1)">{{ t('common.action.next') }}</UiButton>
             </div>
           </div>
         </div>

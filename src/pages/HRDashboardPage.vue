@@ -4,16 +4,19 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from '@/i18n'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
+const { t } = useI18n()
 
 type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 type LeaveRequest = {
   employeeName: string
   employeeTitle: string
-  type: string
+  typeKey: 'sickLeave' | 'vacation' | 'personal'
   dates: string
   status: LeaveStatus
   avatarUrl?: string
@@ -23,7 +26,7 @@ const leaveRequests: LeaveRequest[] = [
   {
     employeeName: 'Guy Hawkins',
     employeeTitle: 'Fullstack Dev',
-    type: 'Sick Leave',
+    typeKey: 'sickLeave',
     dates: 'Oct 12 - 14',
     status: 'PENDING',
     avatarUrl:
@@ -32,7 +35,7 @@ const leaveRequests: LeaveRequest[] = [
   {
     employeeName: 'Kristin Watson',
     employeeTitle: 'UI Designer',
-    type: 'Vacation',
+    typeKey: 'vacation',
     dates: 'Oct 20 - 27',
     status: 'APPROVED',
     avatarUrl:
@@ -41,7 +44,7 @@ const leaveRequests: LeaveRequest[] = [
   {
     employeeName: 'Robert Fox',
     employeeTitle: 'Sales Lead',
-    type: 'Personal',
+    typeKey: 'personal',
     dates: 'Oct 15',
     status: 'PENDING',
     avatarUrl:
@@ -49,13 +52,13 @@ const leaveRequests: LeaveRequest[] = [
   },
 ]
 
-const leaveHeaders: UiTableHeader[] = [
-  { key: 'employee', label: 'Employee' },
-  { key: 'type', label: 'Type' },
-  { key: 'dates', label: 'Dates' },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions', align: 'right' },
-]
+const leaveHeaders = computed<UiTableHeader[]>(() => [
+  { key: 'employee', label: t('hrOverview.leaveRequests.headers.employee') },
+  { key: 'type', label: t('hrOverview.leaveRequests.headers.type') },
+  { key: 'dates', label: t('hrOverview.leaveRequests.headers.dates') },
+  { key: 'status', label: t('hrOverview.leaveRequests.headers.status') },
+  { key: 'actions', label: t('hrOverview.leaveRequests.headers.actions'), align: 'right' },
+])
 
 function statusBadgeVariant(status: LeaveStatus) {
   if (status === 'APPROVED') return 'success' as const
@@ -69,9 +72,21 @@ function statusBadgeIcon(status: LeaveStatus) {
   return 'warning'
 }
 
+function statusLabel(status: LeaveStatus) {
+  if (status === 'APPROVED') return t('common.status.approved')
+  if (status === 'REJECTED') return t('common.status.rejected')
+  return t('common.status.pending')
+}
+
 function exportReport() {
   const header = ['employeeName', 'employeeTitle', 'type', 'dates', 'status']
-  const rows = leaveRequests.map(r => [r.employeeName, r.employeeTitle, r.type, r.dates, r.status])
+  const rows = leaveRequests.map(r => [
+    r.employeeName,
+    r.employeeTitle,
+    t(`hrOverview.leaveRequests.types.${r.typeKey}`),
+    r.dates,
+    statusLabel(r.status),
+  ])
   const csv = [header, ...rows]
     .map(cols => cols.map(v => `"${String(v).replaceAll('"', '""')}"`).join(','))
     .join('\n')
@@ -91,12 +106,12 @@ function exportReport() {
     <div class="space-y-8">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 class="text-2xl font-bold text-slate-900 dark:text-white">HR Overview</h2>
-          <p class="text-slate-500">Welcome back, here's what's happening today.</p>
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white">{{ t('hrOverview.title') }}</h2>
+          <p class="text-slate-500">{{ t('hrOverview.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <UiButton variant="outline" leadingIcon="file_download" @click="exportReport">Export Report</UiButton>
-          <UiButton variant="primary" leadingIcon="add_circle" @click="router.push(AppRoute.CREATE_EMPLOYEE)">Add Employee</UiButton>
+          <UiButton variant="outline" leadingIcon="file_download" @click="exportReport">{{ t('hrOverview.actions.exportReport') }}</UiButton>
+          <UiButton variant="primary" leadingIcon="add_circle" @click="router.push(AppRoute.CREATE_EMPLOYEE)">{{ t('hrOverview.actions.addEmployee') }}</UiButton>
         </div>
       </div>
 
@@ -106,9 +121,9 @@ function exportReport() {
                 <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600">
                   <UiIcon name="groups" />
                 </div>
-                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">+12%</span>
+                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{{ t('hrOverview.metrics.totalEmployeesTrend') }}</span>
               </div>
-              <p class="text-slate-500 text-sm font-medium">Total Employees</p>
+              <p class="text-slate-500 text-sm font-medium">{{ t('hrOverview.metrics.totalEmployees') }}</p>
               <h3 class="text-2xl font-bold mt-1">1,248</h3>
             </div>
 
@@ -117,9 +132,9 @@ function exportReport() {
                 <div class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-600">
                   <UiIcon name="pending_actions" />
                 </div>
-                <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">8 New</span>
+                <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">{{ t('hrOverview.metrics.pendingLeaveTrend') }}</span>
               </div>
-              <p class="text-slate-500 text-sm font-medium">Pending Leave</p>
+              <p class="text-slate-500 text-sm font-medium">{{ t('hrOverview.metrics.pendingLeave') }}</p>
               <h3 class="text-2xl font-bold mt-1">12</h3>
             </div>
 
@@ -128,9 +143,9 @@ function exportReport() {
                 <div class="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg text-green-600">
                   <UiIcon name="payments" />
                 </div>
-                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">On track</span>
+                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{{ t('hrOverview.metrics.activePayrollTrend') }}</span>
               </div>
-              <p class="text-slate-500 text-sm font-medium">Active Payroll</p>
+              <p class="text-slate-500 text-sm font-medium">{{ t('hrOverview.metrics.activePayroll') }}</p>
               <h3 class="text-2xl font-bold mt-1">$450k</h3>
             </div>
 
@@ -139,9 +154,9 @@ function exportReport() {
                 <div class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600">
                   <UiIcon name="event_available" />
                 </div>
-                <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Today</span>
+                <span class="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">{{ t('hrOverview.metrics.onLeaveTrend') }}</span>
               </div>
-              <p class="text-slate-500 text-sm font-medium">On Leave</p>
+              <p class="text-slate-500 text-sm font-medium">{{ t('hrOverview.metrics.onLeave') }}</p>
               <h3 class="text-2xl font-bold mt-1">24</h3>
             </div>
           </div>
@@ -149,35 +164,35 @@ function exportReport() {
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
           <div class="p-6 border-b border-slate-100 dark:border-slate-800">
-            <h3 class="font-bold text-slate-900 dark:text-white">Department Distribution</h3>
+            <h3 class="font-bold text-slate-900 dark:text-white">{{ t('hrOverview.departments.title') }}</h3>
           </div>
           <div class="flex-1 p-6 flex flex-col items-center justify-center min-h-[300px]">
             <div class="relative w-48 h-48 rounded-full border-[20px] border-primary flex items-center justify-center mb-6">
               <div class="absolute inset-[-20px] rounded-full border-[20px] border-slate-200 border-t-transparent border-l-transparent rotate-45"></div>
               <div class="text-center">
                 <p class="text-2xl font-bold">1,248</p>
-                <p class="text-xs text-slate-500 uppercase tracking-wide">Total Staff</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wide">{{ t('hrOverview.departments.totalStaff') }}</p>
               </div>
             </div>
             <div class="w-full space-y-3">
               <div class="flex items-center justify-between text-sm">
                 <div class="flex items-center gap-2">
                   <div class="w-3 h-3 bg-primary rounded-full"></div>
-                  <span>Engineering</span>
+                  <span>{{ t('hrOverview.departments.engineering') }}</span>
                 </div>
                 <span class="font-bold">45%</span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <div class="flex items-center gap-2">
                   <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
-                  <span>Sales &amp; Marketing</span>
+                  <span>{{ t('hrOverview.departments.salesMarketing') }}</span>
                 </div>
                 <span class="font-bold">28%</span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <div class="flex items-center gap-2">
                   <div class="w-3 h-3 bg-slate-300 rounded-full"></div>
-                  <span>Operations</span>
+                  <span>{{ t('hrOverview.departments.operations') }}</span>
                 </div>
                 <span class="font-bold">15%</span>
               </div>
@@ -187,8 +202,8 @@ function exportReport() {
 
         <div class="xl:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <h3 class="font-bold text-slate-900 dark:text-white">Recent Leave Requests</h3>
-            <button class="text-primary text-sm font-semibold hover:underline" @click="exportReport">View All</button>
+            <h3 class="font-bold text-slate-900 dark:text-white">{{ t('hrOverview.leaveRequests.title') }}</h3>
+            <button class="text-primary text-sm font-semibold hover:underline" @click="exportReport">{{ t('hrOverview.actions.viewAll') }}</button>
           </div>
           <UiTable
             :headers="leaveHeaders"
@@ -210,7 +225,7 @@ function exportReport() {
             </template>
 
             <template #cell-type="{ row }">
-              <span class="text-sm text-slate-600 dark:text-slate-400">{{ row.type }}</span>
+              <span class="text-sm text-slate-600 dark:text-slate-400">{{ t(`hrOverview.leaveRequests.types.${row.typeKey}`) }}</span>
             </template>
 
             <template #cell-dates="{ row }">
@@ -219,16 +234,16 @@ function exportReport() {
 
             <template #cell-status="{ row }">
               <UiBadge :variant="statusBadgeVariant(row.status)" :icon="statusBadgeIcon(row.status)">
-                {{ row.status }}
+                {{ statusLabel(row.status) }}
               </UiBadge>
             </template>
 
             <template #cell-actions>
               <div class="flex justify-end gap-2">
-                <button class="p-1 hover:text-green-600 transition-colors" title="Approve">
+                <button class="p-1 hover:text-green-600 transition-colors" :title="t('hrOverview.leaveRequests.actions.approve')">
                   <UiIcon name="check_circle" size="18px" />
                 </button>
-                <button class="p-1 hover:text-red-600 transition-colors" title="Reject">
+                <button class="p-1 hover:text-red-600 transition-colors" :title="t('hrOverview.leaveRequests.actions.reject')">
                   <UiIcon name="cancel" size="18px" />
                 </button>
               </div>
@@ -244,8 +259,8 @@ function exportReport() {
         >
           <div class="flex items-center justify-between">
             <div>
-              <p class="font-bold">Salary Components</p>
-              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage payroll components</p>
+              <p class="font-bold">{{ t('hrOverview.quickLinks.salaryComponents.title') }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ t('hrOverview.quickLinks.salaryComponents.description') }}</p>
             </div>
             <UiIcon name="account_balance_wallet" class="text-slate-500" />
           </div>
@@ -257,8 +272,8 @@ function exportReport() {
         >
           <div class="flex items-center justify-between">
             <div>
-              <p class="font-bold">Salary Templates</p>
-              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Build salary templates</p>
+              <p class="font-bold">{{ t('hrOverview.quickLinks.salaryTemplates.title') }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ t('hrOverview.quickLinks.salaryTemplates.description') }}</p>
             </div>
             <UiIcon name="description" class="text-slate-500" />
           </div>
@@ -270,8 +285,8 @@ function exportReport() {
         >
           <div class="flex items-center justify-between">
             <div>
-              <p class="font-bold">Employee Salaries</p>
-              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Create salary slips</p>
+              <p class="font-bold">{{ t('hrOverview.quickLinks.employeeSalaries.title') }}</p>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ t('hrOverview.quickLinks.employeeSalaries.description') }}</p>
             </div>
             <UiIcon name="payments" class="text-slate-500" />
           </div>

@@ -9,6 +9,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
+import { useI18n } from '@/i18n'
 import { employeeSalaryService, type EmployeeSalaryListResponse } from '@/services/employee-salary.service'
 import { AppRoute } from '@/types'
 
@@ -23,6 +24,7 @@ type SalaryRow = {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const loading = ref(false)
 const error = ref('')
@@ -47,14 +49,14 @@ const applied = ref({
 
 const rows = ref<SalaryRow[]>([])
 
-const headers: UiTableHeader[] = [
-    { key: 'employeeName', label: 'Employee Name', thClass: 'min-w-[220px]' },
-    { key: 'effectiveFrom', label: 'Effective From' },
-    { key: 'effectiveTo', label: 'Effective To' },
-    { key: 'totalAmount', label: 'Total Amount', align: 'right' },
-    { key: 'currency', label: 'Currency', align: 'center' },
-    { key: 'actions', label: 'Actions', align: 'center' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+    { key: 'employeeName', label: t('salarySlips.list.headers.employeeName'), thClass: 'min-w-[220px]' },
+    { key: 'effectiveFrom', label: t('salarySlips.list.headers.effectiveFrom') },
+    { key: 'effectiveTo', label: t('salarySlips.list.headers.effectiveTo') },
+    { key: 'totalAmount', label: t('salarySlips.list.headers.totalAmount'), align: 'right' },
+    { key: 'currency', label: t('salarySlips.list.headers.currency'), align: 'center' },
+    { key: 'actions', label: t('salarySlips.list.headers.actions'), align: 'center' },
+])
 
 function toNumber(value: unknown) {
     if (typeof value === 'number') return value
@@ -100,7 +102,7 @@ async function loadRows() {
         rows.value = []
         totalElements.value = 0
         totalPages.value = 1
-        error.value = e?.response?.data?.message ?? 'Unable to load salary data from API.'
+        error.value = e?.response?.data?.message ?? t('salarySlips.list.messages.loadFailed')
     } finally {
         loading.value = false
     }
@@ -117,7 +119,7 @@ function normalizeDate(value: string | null | undefined) {
 }
 
 function formatDate(value: string | null) {
-    if (!value) return 'Ongoing'
+    if (!value) return t('salarySlips.list.messages.ongoing')
     const d = normalizeDate(value)
     if (!d) return value
     return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(d)
@@ -183,7 +185,7 @@ function exportCsv() {
     const body = filteredRows.value.map((row) => [
         row.employeeName,
         row.effectiveFrom,
-        row.effectiveTo ?? 'Ongoing',
+        row.effectiveTo ?? t('salarySlips.list.messages.ongoing'),
         row.totalAmount,
         row.currency,
     ])
@@ -207,17 +209,17 @@ function exportCsv() {
         <div class="space-y-6">
             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold">Salary Management</h1>
+                    <h1 class="text-2xl font-bold">{{ t('salarySlips.list.title') }}</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Review and manage employee compensation schedules.
+                        {{ t('salarySlips.list.subtitle') }}
                     </p>
                 </div>
 
                 <div class="flex flex-wrap gap-3">
-                    <UiButton variant="outline" leading-icon="filter_list" @click="applyFilters">Filter</UiButton>
-                    <UiButton variant="outline" leading-icon="download" @click="exportCsv">Export</UiButton>
+                    <UiButton variant="outline" leading-icon="filter_list" @click="applyFilters">{{ t('common.action.filter') }}</UiButton>
+                    <UiButton variant="outline" leading-icon="download" @click="exportCsv">{{ t('common.action.export') }}</UiButton>
                     <UiButton variant="primary" leading-icon="add_circle" @click="router.push(AppRoute.SALARY_SLIP)">
-                        Add Salary
+                        {{ t('salarySlips.list.actions.addSalary') }}
                     </UiButton>
                 </div>
             </div>
@@ -226,13 +228,13 @@ function exportCsv() {
                 <UiCardBody>
                     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end">
                         <div class="lg:col-span-2">
-                            <UiInput v-model="search" label="Employee or Currency"
-                                placeholder="Search employee, currency..." leading-icon="search"
+                            <UiInput v-model="search" :label="t('salarySlips.list.filters.employeeOrCurrency')"
+                                :placeholder="t('salarySlips.list.filters.employeeOrCurrencyPlaceholder')" leading-icon="search"
                                 @keyup.enter="applyFilters" />
                         </div>
 
                         <div class="lg:col-span-2">
-                            <p class="ui-label">Effective Range</p>
+                            <p class="ui-label">{{ t('salarySlips.list.filters.effectiveRange') }}</p>
                             <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                                 <UiInput v-model="effectiveFrom" type="date" />
                                 <span class="text-slate-400">-</span>
@@ -241,18 +243,18 @@ function exportCsv() {
                         </div>
 
                         <div>
-                            <p class="ui-label">Total Amount Range</p>
+                            <p class="ui-label">{{ t('salarySlips.list.filters.totalAmountRange') }}</p>
                             <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-                                <UiInput v-model="minAmount" type="number" placeholder="Min" leading-icon="payments" />
+                                <UiInput v-model="minAmount" type="number" :placeholder="t('salarySlips.list.filters.min')" leading-icon="payments" />
                                 <span class="text-slate-400">-</span>
-                                <UiInput v-model="maxAmount" type="number" placeholder="Max" leading-icon="payments" />
+                                <UiInput v-model="maxAmount" type="number" :placeholder="t('salarySlips.list.filters.max')" leading-icon="payments" />
                             </div>
                         </div>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-4">
-                        <UiButton variant="outline" @click="resetFilters">Reset</UiButton>
-                        <UiButton variant="primary" leading-icon="filter_alt" @click="applyFilters">Apply Filters
+                        <UiButton variant="outline" @click="resetFilters">{{ t('common.action.reset') }}</UiButton>
+                        <UiButton variant="primary" leading-icon="filter_alt" @click="applyFilters">{{ t('salarySlips.list.actions.applyFilters') }}
                         </UiButton>
                     </div>
                 </UiCardBody>
@@ -261,13 +263,13 @@ function exportCsv() {
             <UiCard>
                 <div class="p-4 md:p-6">
                     <div v-if="error" class="text-sm text-amber-600 dark:text-amber-400 mb-4">{{ error }}</div>
-                    <div v-if="loading" class="text-sm text-slate-500">Loading salary records...</div>
+                    <div v-if="loading" class="text-sm text-slate-500">{{ t('salarySlips.list.messages.loading') }}</div>
 
                     <UiTable v-else :headers="headers" :rows="pagedRows" row-key="id"
                         row-class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                         th-base-class="px-4 md:px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider"
                         td-base-class="px-4 md:px-6 py-4 text-sm" table-class="min-w-[980px]"
-                        empty-text="No salary records found">
+                        :empty-text="t('salarySlips.list.messages.empty')">
                         <template #cell-employeeName="{ row }">
                             <div class="flex items-center gap-3">
                                 <div class="size-8 rounded-full bg-slate-200 bg-cover bg-center"
@@ -317,14 +319,12 @@ function exportCsv() {
                 <div
                     class="px-4 md:px-6 py-4 border-t border-primary/10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <p class="text-sm text-slate-500 dark:text-slate-400">
-                        Showing <span class="font-bold text-slate-900 dark:text-white">{{ pageStart }}</span> to
-                        <span class="font-bold text-slate-900 dark:text-white">{{ pageEnd }}</span> of
-                        <span class="font-bold text-slate-900 dark:text-white">{{ totalElements }}</span> results
+                        {{ t('salarySlips.list.messages.showing', { start: pageStart, end: pageEnd, total: totalElements }) }}
                     </p>
 
                     <div class="flex items-center gap-2">
                         <UiButton variant="outline" :disabled="currentPage <= 1" @click="setPage(currentPage - 1)">
-                            Previous</UiButton>
+                            {{ t('common.action.previous') }}</UiButton>
 
                         <template v-for="(page, idx) in pageButtons" :key="`${page}-${idx}`">
                             <span v-if="page === '...'" class="px-1 text-slate-400">...</span>
@@ -335,7 +335,7 @@ function exportCsv() {
                         </template>
 
                         <UiButton variant="outline" :disabled="currentPage >= totalPages"
-                            @click="setPage(currentPage + 1)">Next
+                            @click="setPage(currentPage + 1)">{{ t('common.action.next') }}
                         </UiButton>
                     </div>
                 </div>
@@ -350,7 +350,7 @@ function exportCsv() {
                                 <UiIcon name="trending_up" />
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Payroll</p>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('salarySlips.list.stats.totalPayroll') }}</p>
                                 <p class="text-xl font-black text-slate-900 dark:text-white">{{
                                     formatMoney(totalPayroll, 'USD') }}
                                 </p>
@@ -366,8 +366,7 @@ function exportCsv() {
                                 <UiIcon name="badge" />
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Contracts
-                                </p>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('salarySlips.list.stats.activeContracts') }}</p>
                                 <p class="text-xl font-black text-slate-900 dark:text-white">{{ activeContracts }}</p>
                             </div>
                         </div>
@@ -382,7 +381,7 @@ function exportCsv() {
                                 <UiIcon name="hourglass_empty" />
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Reviews</p>
+                                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ t('salarySlips.list.stats.pendingReviews') }}</p>
                                 <p class="text-xl font-black text-slate-900 dark:text-white">{{ pendingReviews }}</p>
                             </div>
                         </div>

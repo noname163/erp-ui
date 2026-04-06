@@ -5,6 +5,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import { userProfileService } from '@/services/user-profile.service'
+import { useI18n } from '@/i18n'
 
 type EmployeeOption = {
   id: string
@@ -25,6 +26,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'confirm', selectedCodes: string[]): void
 }>()
+const { t } = useI18n()
 
 const loading = ref(false)
 const error = ref('')
@@ -111,14 +113,14 @@ function normalizeEmployee(payload: unknown, index: number): EmployeeOption {
   const item = payload as Record<string, unknown>
   const firstName = getString(item, ['firstName'])
   const lastName = getString(item, ['lastName'])
-  const name = getString(item, ['fullName', 'name'], '').trim() || [firstName, lastName].filter(Boolean).join(' ') || `Employee ${index + 1}`
+  const name = getString(item, ['fullName', 'name'], '').trim() || [firstName, lastName].filter(Boolean).join(' ') || t('policies.assignmentModal.defaults.employee', { index: index + 1 })
 
   return {
     id: getString(item, ['id', 'code', 'employeeCode', 'userCode'], `EMP-${index + 1}`),
     code: getString(item, ['employeeCode', 'code', 'userCode'], `EMP-${String(index + 1).padStart(4, '0')}`),
     name,
-    title: getString(item, ['jobTitle', 'title', 'roleName'], 'Team Member'),
-    department: getString(item, ['departmentName', 'department'], 'General'),
+    title: getString(item, ['jobTitle', 'title', 'roleName'], t('policies.assignmentModal.defaults.teamMember')),
+    department: getString(item, ['departmentName', 'department'], t('policies.assignmentModal.defaults.general')),
     avatarUrl: getString(item, ['avatarUrl', 'avatar']),
     initials: nameInitials(name),
   }
@@ -134,7 +136,7 @@ async function loadEmployees() {
     rows.value = Array.isArray(data) && data.length > 0 ? data.map(normalizeEmployee) : [...seedRows]
   } catch (err: any) {
     rows.value = [...seedRows]
-    error.value = err?.response?.data?.message ?? 'Unable to load employee data. Showing sample roster.'
+    error.value = err?.response?.data?.message ?? t('policies.assignmentModal.loadFailed')
   } finally {
     loading.value = false
     loaded.value = true
@@ -213,9 +215,9 @@ function confirmSelection() {
       <div class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.25rem] bg-white shadow-2xl">
         <div class="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h2 class="text-xl font-black tracking-tight text-slate-900">Assign Employees to Policy</h2>
+            <h2 class="text-xl font-black tracking-tight text-slate-900">{{ t('policies.assignmentModal.title') }}</h2>
             <p class="mt-1 text-sm text-slate-500">
-              Policy:
+              {{ t('policies.assignmentModal.policyLabel') }}:
               <span class="font-semibold text-primary">{{ policyName }}</span>
             </p>
           </div>
@@ -234,17 +236,17 @@ function confirmSelection() {
             <div class="flex-1">
               <UiInput
                 v-model="search"
-                placeholder="Search by name, ID or department..."
+                :placeholder="t('policies.assignmentModal.searchPlaceholder')"
                 leading-icon="search"
               />
             </div>
-            <UiButton variant="outline" leading-icon="filter_list">Filters</UiButton>
+            <UiButton variant="outline" leading-icon="filter_list">{{ t('policies.assignmentModal.filters') }}</UiButton>
           </div>
           <p v-if="error" class="mt-3 text-sm text-amber-600">{{ error }}</p>
         </div>
 
         <div class="flex-1 overflow-auto">
-          <div v-if="loading" class="px-6 py-8 text-sm text-slate-500">Loading employees...</div>
+          <div v-if="loading" class="px-6 py-8 text-sm text-slate-500">{{ t('policies.assignmentModal.loading') }}</div>
 
           <table v-else class="min-w-full border-collapse text-left">
             <thead class="sticky top-0 z-10 bg-slate-50">
@@ -258,13 +260,13 @@ function confirmSelection() {
                   />
                 </th>
                 <th class="border-b border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
-                  Employee
+                  {{ t('policies.assignmentModal.headers.employee') }}
                 </th>
                 <th class="border-b border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
-                  Department
+                  {{ t('policies.assignmentModal.headers.department') }}
                 </th>
                 <th class="border-b border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
-                  Employee ID
+                  {{ t('policies.assignmentModal.headers.employeeId') }}
                 </th>
               </tr>
             </thead>
@@ -311,7 +313,7 @@ function confirmSelection() {
               </tr>
 
               <tr v-if="filteredRows.length === 0">
-                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">No employees match the current search.</td>
+                <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">{{ t('policies.assignmentModal.empty') }}</td>
               </tr>
             </tbody>
           </table>
@@ -323,14 +325,14 @@ function confirmSelection() {
               <UiIcon name="group" size="20" :fill="1" />
             </div>
             <p class="text-sm font-semibold text-slate-900">
-              Total Selected:
-              <span class="text-primary">{{ selectedCount }} Employees</span>
+              {{ t('policies.assignmentModal.totalSelected') }}
+              <span class="text-primary">{{ t('policies.assignmentModal.employees', { count: selectedCount }) }}</span>
             </p>
           </div>
 
           <div class="flex items-center gap-3">
-            <UiButton variant="outline" @click="close">Cancel</UiButton>
-            <UiButton leading-icon="check_circle" @click="confirmSelection">Confirm Assignment</UiButton>
+            <UiButton variant="outline" @click="close">{{ t('policies.assignmentModal.actions.cancel') }}</UiButton>
+            <UiButton leading-icon="check_circle" @click="confirmSelection">{{ t('policies.assignmentModal.actions.confirmAssignment') }}</UiButton>
           </div>
         </div>
       </div>

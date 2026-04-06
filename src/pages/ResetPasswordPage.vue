@@ -137,7 +137,7 @@ function cancel() {
                 v-model="currentPassword"
                 :label="t('resetPassword.currentPassword')"
                 :type="showCurrent ? 'text' : 'password'"
-                placeholder="••••••••"
+                :placeholder="t('resetPassword.passwordPlaceholder')"
                 required
                 autocomplete="current-password"
                 name="currentPassword"
@@ -151,7 +151,7 @@ function cancel() {
                   v-model="newPassword"
                   :label="t('resetPassword.newPassword')"
                   :type="showNew ? 'text' : 'password'"
-                  placeholder="••••••••"
+                  :placeholder="t('resetPassword.passwordPlaceholder')"
                   required
                   autocomplete="new-password"
                   name="newPassword"
@@ -188,7 +188,7 @@ function cancel() {
                 v-model="confirmPassword"
                 :label="t('resetPassword.confirmPassword')"
                 :type="showConfirm ? 'text' : 'password'"
-                placeholder="••••••••"
+                :placeholder="t('resetPassword.passwordPlaceholder')"
                 required
                 autocomplete="new-password"
                 name="confirmPassword"

@@ -10,6 +10,7 @@ import UiCardBody from '@/components/ui/UiCardBody.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
+import { useI18n } from '@/i18n'
 import { payrollPolicy, type PayrollPolicyResponse } from '@/services/payroll-policy.service'
 import { AppRoute } from '@/types'
 
@@ -31,6 +32,7 @@ type PolicyRow = PayrollPolicyResponse & {
 }
 
 const router = useRouter()
+const { t } = useI18n()
 
 const loading = ref(false)
 const error = ref('')
@@ -44,19 +46,19 @@ const selectedPolicy = ref<PolicyRow | null>(null)
 const assignmentCounts = ref<Record<string, number>>({})
 const assignmentMessage = ref('')
 
-const headers: UiTableHeader[] = [
-    { key: 'name', label: 'Policy Name', thClass: 'min-w-[250px]' },
-    { key: 'standardQty', label: 'Standard Qty', align: 'center' },
-    { key: 'unitLabel', label: 'Unit' },
-    { key: 'timing', label: 'Timing (Start-End)', thClass: 'min-w-[170px]' },
-    { key: 'effectiveRange', label: 'Effective Range', thClass: 'min-w-[150px]' },
-    { key: 'affected', label: 'Affected', align: 'center' },
-    { key: 'authorship', label: 'Authorship', thClass: 'min-w-[140px]' },
-    { key: 'actions', label: 'Actions', align: 'right' },
-]
+const headers = computed<UiTableHeader[]>(() => [
+    { key: 'name', label: t('policies.list.headers.name'), thClass: 'min-w-[250px]' },
+    { key: 'standardQty', label: t('policies.list.headers.standardQty'), align: 'center' },
+    { key: 'unitLabel', label: t('policies.list.headers.unit') },
+    { key: 'timing', label: t('policies.list.headers.timing'), thClass: 'min-w-[170px]' },
+    { key: 'effectiveRange', label: t('policies.list.headers.effectiveRange'), thClass: 'min-w-[150px]' },
+    { key: 'affected', label: t('policies.list.headers.affected'), align: 'center' },
+    { key: 'authorship', label: t('policies.list.headers.authorship'), thClass: 'min-w-[140px]' },
+    { key: 'actions', label: t('policies.list.headers.actions'), align: 'right' },
+])
 
 function toDateLabel(value?: string | null) {
-    if (!value) return 'No Expiry'
+    if (!value) return t('policies.list.labels.noExpiry')
     const date = new Date(`${value}T00:00:00`)
     if (Number.isNaN(date.getTime())) return value
     return new Intl.DateTimeFormat('en-US', {
@@ -89,7 +91,7 @@ function formatTiming(start?: string | null, end?: string | null) {
     if (formattedStart && formattedEnd) return `${formattedStart} - ${formattedEnd}`
     if (formattedStart) return `${formattedStart} -`
     if (formattedEnd) return `- ${formattedEnd}`
-    return 'Flexible'
+    return t('policies.list.labels.flexible')
 }
 
 function deriveLifecycle(item: PayrollPolicyResponse): PolicyLifecycle {
@@ -122,18 +124,18 @@ function deriveRisk(item: PayrollPolicyResponse, lifecycle: PolicyLifecycle): Po
 
 function buildUpdatedLabel(item: PayrollPolicyResponse, lifecycle: PolicyLifecycle) {
     if (lifecycle === 'DRAFT' && item.effectiveFrom) {
-        return `Starts ${toDateLabel(item.effectiveFrom)}`
+        return t('policies.list.labels.starts', { date: toDateLabel(item.effectiveFrom) })
     }
 
     if (lifecycle === 'ARCHIVED' && item.effectiveTo) {
-        return `Ended ${toDateLabel(item.effectiveTo)}`
+        return t('policies.list.labels.ended', { date: toDateLabel(item.effectiveTo) })
     }
 
     if (item.effectiveTo) {
-        return `Ends ${toDateLabel(item.effectiveTo)}`
+        return t('policies.list.labels.ends', { date: toDateLabel(item.effectiveTo) })
     }
 
-    return 'Open-ended'
+    return t('policies.list.labels.openEnded')
 }
 
 function makePolicyRow(item: PayrollPolicyResponse, index: number): PolicyRow {
@@ -143,7 +145,7 @@ function makePolicyRow(item: PayrollPolicyResponse, index: number): PolicyRow {
         ...item,
         id: String(item.code ?? item.name ?? `policy-${index}`),
         code: String(item.code ?? `policy-${index}`),
-        name: String(item.name ?? `Policy ${index + 1}`),
+        name: String(item.name ?? t('policies.list.labels.defaultPolicyName', { index: index + 1 })),
         standardQuantityPerDay: item.standardQuantityPerDay ?? null,
         unitCode: item.unitCode ? String(item.unitCode) : null,
         standardStartTime: item.standardStartTime ? String(item.standardStartTime) : null,
@@ -151,16 +153,18 @@ function makePolicyRow(item: PayrollPolicyResponse, index: number): PolicyRow {
         roundingRule: item.roundingRule ? String(item.roundingRule) : null,
         effectiveFrom: String(item.effectiveFrom ?? ''),
         effectiveTo: item.effectiveTo ? String(item.effectiveTo) : null,
-        category: item.roundingRule ? `Rounding ${item.roundingRule}` : 'Payroll Policy',
+        category: item.roundingRule
+            ? t('policies.list.labels.roundingCategory', { rule: item.roundingRule })
+            : t('policies.list.labels.payrollPolicy'),
         standardQty: formatQuantity(item.standardQuantityPerDay, '0.00'),
-        unitLabel: item.unitCode ? String(item.unitCode) : 'N/A',
+        unitLabel: item.unitCode ? String(item.unitCode) : t('common.state.notAvailable'),
         timing: formatTiming(item.standardStartTime, item.standardEndTime),
         affectedCount: 0,
         affectedAvatars: [],
         updatedLabel: buildUpdatedLabel(item, lifecycle),
         lifecycle,
         risk: deriveRisk(item, lifecycle),
-        createdBy: 'System',
+        createdBy: t('policies.list.authorship.createdByFallback'),
     }
 }
 
@@ -170,7 +174,7 @@ function normalizeRows(data: unknown[]): PolicyRow[] {
 
         return makePolicyRow({
             code: String(item.code ?? `policy-${index}`),
-            name: String(item.name ?? `Policy ${index + 1}`),
+            name: String(item.name ?? t('policies.list.labels.defaultPolicyName', { index: index + 1 })),
             standardQuantityPerDay: item.standardQuantityPerDay == null ? null : Number(item.standardQuantityPerDay),
             unitCode: item.unitCode ? String(item.unitCode) : null,
             standardStartTime: item.standardStartTime ? String(item.standardStartTime) : null,
@@ -192,7 +196,7 @@ async function loadPolicies() {
         rows.value = normalizeRows(data)
     } catch (err: any) {
         rows.value = []
-        error.value = err?.response?.data?.message ?? 'Unable to load policies from API.'
+        error.value = err?.response?.data?.message ?? t('policies.list.loadFailed')
     } finally {
         loading.value = false
     }
@@ -267,9 +271,9 @@ function displayRiskVariant(risk: PolicyRisk) {
 }
 
 function displayRiskLabel(risk: PolicyRisk) {
-    if (risk === 'critical') return 'Urgent'
-    if (risk === 'attention') return 'Needs review'
-    return 'Healthy'
+    if (risk === 'critical') return t('policies.list.risk.urgent')
+    if (risk === 'attention') return t('policies.list.risk.needsReview')
+    return t('policies.list.risk.healthy')
 }
 
 function exportCsv() {
@@ -313,12 +317,12 @@ async function handleAssignmentConfirm(employeeCodes: string[]) {
     if (!selectedPolicy.value) return
 
     if (employeeCodes.length === 0) {
-        error.value = 'Select at least one employee before confirming the assignment.'
+        error.value = t('policies.list.assignment.selectEmployees')
         return
     }
 
     if (!selectedPolicy.value.effectiveFrom || !selectedPolicy.value.effectiveTo) {
-        error.value = 'The selected policy must have both effective dates before employees can be assigned.'
+        error.value = t('policies.list.assignment.datesRequired')
         return
     }
 
@@ -338,9 +342,12 @@ async function handleAssignmentConfirm(employeeCodes: string[]) {
             [selectedPolicy.value.id]: employeeCodes.length,
         }
 
-        assignmentMessage.value = `Assigned ${employeeCodes.length} employees to ${selectedPolicy.value.name}.`
+        assignmentMessage.value = t('policies.list.assignment.success', {
+            count: employeeCodes.length,
+            name: selectedPolicy.value.name,
+        })
     } catch (err: any) {
-        error.value = err?.response?.data?.message ?? 'Unable to apply the payroll policy to the selected employees.'
+        error.value = err?.response?.data?.message ?? t('policies.list.assignment.failed')
     }
 }
 
@@ -348,6 +355,12 @@ function setLifecycle(tab: string) {
     if (tab === 'ACTIVE' || tab === 'DRAFT' || tab === 'ARCHIVED') {
         lifecycle.value = tab
     }
+}
+
+function lifecycleLabel(tab: string) {
+    if (tab === 'DRAFT') return t('policies.list.tabs.draft')
+    if (tab === 'ARCHIVED') return t('policies.list.tabs.archived')
+    return t('policies.list.tabs.active')
 }
 </script>
 
@@ -358,20 +371,19 @@ function setLifecycle(tab: string) {
                 <div class="space-y-2">
                     <div
                         class="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        <span>Management</span>
+                        <span>{{ t('policies.list.breadcrumb.management') }}</span>
                         <UiIcon name="chevron_right" size="14" />
-                        <span class="text-primary">Policy List</span>
+                        <span class="text-primary">{{ t('policies.list.breadcrumb.current') }}</span>
                     </div>
-                    <h1 class="text-4xl font-black tracking-tight text-slate-900">Compliance Policies</h1>
+                    <h1 class="text-4xl font-black tracking-tight text-slate-900">{{ t('policies.list.title') }}</h1>
                     <p class="max-w-2xl text-sm leading-6 text-slate-500">
-                        Manage regulatory payroll standards, employee allocations, and effective timeframes across all
-                        enterprise departments.
+                        {{ t('policies.list.subtitle') }}
                     </p>
                 </div>
 
                 <div class="flex w-full flex-col gap-3 xl:max-w-3xl xl:items-end">
                     <div class="w-full xl:max-w-sm">
-                        <UiInput v-model="search" placeholder="Search policies, units or creators..."
+                        <UiInput v-model="search" :placeholder="t('policies.list.searchPlaceholder')"
                             leading-icon="search" />
                     </div>
 
@@ -383,13 +395,13 @@ function setLifecycle(tab: string) {
                                         ? 'bg-primary/10 text-primary'
                                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                     " @click="setLifecycle(tab)">
-                                {{ tab.toLowerCase() }}
+                                {{ lifecycleLabel(tab) }}
                             </button>
                         </div>
 
-                        <UiButton variant="outline" leading-icon="filter_list">Filter</UiButton>
-                        <UiButton variant="outline" leading-icon="file_download" @click="exportCsv">Export</UiButton>
-                        <UiButton leading-icon="add" @click="router.push(AppRoute.PAYROLL_POLICY_BUILDER)">New Policy
+                        <UiButton variant="outline" leading-icon="filter_list">{{ t('common.action.filter') }}</UiButton>
+                        <UiButton variant="outline" leading-icon="file_download" @click="exportCsv">{{ t('common.action.export') }}</UiButton>
+                        <UiButton leading-icon="add" @click="router.push(AppRoute.PAYROLL_POLICY_BUILDER)">{{ t('policies.list.actions.newPolicy') }}
                         </UiButton>
                     </div>
                 </div>
@@ -404,13 +416,12 @@ function setLifecycle(tab: string) {
                 <UiCard class="lg:col-span-4">
                     <UiCardBody class="flex h-full flex-col justify-between">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Global Policy
-                                Density</p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{{ t('policies.list.stats.globalPolicyDensity') }}</p>
                             <h3 class="mt-2 text-4xl font-black tracking-tight text-slate-900">{{ totalPolicies }}</h3>
                         </div>
                         <div class="mt-6 flex items-center gap-2 text-sm font-semibold text-emerald-600">
                             <UiIcon name="trending_up" size="18" />
-                            <span>+12% from last quarter</span>
+                            <span>{{ t('policies.list.stats.lastQuarter') }}</span>
                         </div>
                     </UiCardBody>
                 </UiCard>
@@ -418,14 +429,13 @@ function setLifecycle(tab: string) {
                 <UiCard class="border-primary bg-primary text-white shadow-xl shadow-primary/20 lg:col-span-4">
                     <UiCardBody class="relative flex h-full flex-col justify-between overflow-hidden">
                         <div class="relative z-10">
-                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">Employees
-                                Affected</p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">{{ t('policies.list.stats.employeesAffected') }}</p>
                             <h3 class="mt-2 text-4xl font-black tracking-tight">{{ totalAffected.toLocaleString() }}
                             </h3>
                         </div>
                         <div class="relative z-10 mt-6 flex items-center gap-2 text-sm font-semibold text-white/90">
                             <UiIcon name="groups" size="18" />
-                            <span>88% enterprise coverage</span>
+                            <span>{{ t('policies.list.stats.enterpriseCoverage') }}</span>
                         </div>
                         <UiIcon name="security" size="150" :fill="1"
                             class="absolute -bottom-8 -right-6 text-white/10" />
@@ -435,13 +445,12 @@ function setLifecycle(tab: string) {
                 <UiCard class="lg:col-span-4">
                     <UiCardBody class="flex h-full flex-col justify-between">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Pending Updates
-                            </p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{{ t('policies.list.stats.pendingUpdates') }}</p>
                             <h3 class="mt-2 text-4xl font-black tracking-tight text-slate-900">{{ pendingUpdates }}</h3>
                         </div>
                         <div class="mt-6 flex items-center gap-2 text-sm font-semibold text-rose-500">
                             <UiIcon name="warning" size="18" />
-                            <span>3 expire in 48h</span>
+                            <span>{{ t('policies.list.stats.expireSoon') }}</span>
                         </div>
                     </UiCardBody>
                 </UiCard>
@@ -451,9 +460,9 @@ function setLifecycle(tab: string) {
                 <div class="border-b border-slate-200 px-6 py-4">
                     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <h2 class="text-lg font-black tracking-tight text-slate-900">Policy Register</h2>
+                            <h2 class="text-lg font-black tracking-tight text-slate-900">{{ t('policies.list.register.title') }}</h2>
                             <p class="text-sm text-slate-500">
-                                Monitor policy coverage, timing windows, and authorship in a single operating surface.
+                                {{ t('policies.list.register.subtitle') }}
                             </p>
                         </div>
 
@@ -462,13 +471,13 @@ function setLifecycle(tab: string) {
                 </div>
 
                 <div class="px-2 pb-2 pt-1">
-                    <div v-if="loading" class="px-4 py-8 text-sm text-slate-500">Loading policies...</div>
+                    <div v-if="loading" class="px-4 py-8 text-sm text-slate-500">{{ t('policies.list.register.loading') }}</div>
 
                     <UiTable v-else :headers="headers" :rows="pagedRows" row-key="id"
                         row-class="hover:bg-slate-50 transition-colors"
                         th-base-class="px-4 md:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500"
                         td-base-class="px-4 md:px-6 py-4 align-middle" table-class="min-w-[1180px]"
-                        body-class="divide-slate-100" head-class="bg-slate-50" empty-text="No policies found.">
+                        body-class="divide-slate-100" head-class="bg-slate-50" :empty-text="t('policies.list.register.empty')">
                         <template #cell-name="{ row }">
                             <div class="flex items-start gap-3">
                                 <div class="mt-1 h-2.5 w-2.5 rounded-full" :class="row.risk === 'critical'
@@ -526,7 +535,7 @@ function setLifecycle(tab: string) {
 
                         <template #cell-authorship="{ row }">
                             <div class="space-y-1 text-sm">
-                                <p class="font-semibold text-slate-900">{{ row.createdBy || 'System' }}</p>
+                                <p class="font-semibold text-slate-900">{{ row.createdBy || t('policies.list.authorship.createdByFallback') }}</p>
                                 <div class="flex items-center gap-2">
                                     <UiBadge :variant="displayRiskVariant(row.risk)" icon="verified">
                                         {{ displayRiskLabel(row.risk) }}
@@ -551,16 +560,11 @@ function setLifecycle(tab: string) {
                 <div
                     class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 md:flex-row md:items-center md:justify-between">
                     <p class="text-sm text-slate-500">
-                        Showing
-                        <span class="font-semibold text-slate-900">{{ filteredRows.length === 0 ? 0 : (currentPage - 1)
-                            * pageSize + 1
-                            }}</span>
-                        to
-                        <span class="font-semibold text-slate-900">{{ Math.min(currentPage * pageSize,
-                            filteredRows.length) }}</span>
-                        of
-                        <span class="font-semibold text-slate-900">{{ filteredRows.length }}</span>
-                        policies
+                        {{ t('policies.list.register.showing', {
+                            start: filteredRows.length === 0 ? 0 : (currentPage - 1) * pageSize + 1,
+                            end: Math.min(currentPage * pageSize, filteredRows.length),
+                            total: filteredRows.length,
+                        }) }}
                     </p>
 
                     <div class="flex items-center gap-2">
@@ -583,7 +587,7 @@ function setLifecycle(tab: string) {
             </UiCard>
         </div>
 
-        <PolicyAssignmentModal v-model="showAssignmentModal" :policy-name="selectedPolicy?.name ?? 'Payroll Policy'"
+        <PolicyAssignmentModal v-model="showAssignmentModal" :policy-name="selectedPolicy?.name ?? t('policies.list.assignment.defaultPolicyName')"
             @confirm="handleAssignmentConfirm" />
     </AppLayout>
 </template>
