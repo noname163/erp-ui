@@ -36,64 +36,7 @@ const error = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 
-const seedRows: EmployeeRow[] = [
-  {
-    id: '100248572',
-    code: 'EMP-90210',
-    name: 'Julian Casablancas',
-    email: 'julian.c@monogram.com',
-    age: 32,
-    department: 'Engineering',
-    skills: ['React', 'GraphQL'],
-    status: 'ACTIVE',
-    createdAt: 'Oct 12, 2023',
-    createdBy: 'System Admin',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDkFjjFcsgzkNNdA5kHtL74RujBGhSMGlEDLB0zeQboX0gYJ2AuEr88OKji1O2peAB__lNWH0bUZ688q6yb1bvRZcut3VqQZWytJ1DHxqUs6Pk9dZlUMEM-0-FSzHTY8EQkoKTN31Uy_7cXqHbADKNWva4Tdq6OYS5Edk-5E8Uo6KkuUlAYuFGhtwHciirY0EwwcHhpmauSolN9Dif7A4ZCsR55W6olb-oZMMf58YPzclQVNsB7da9exMCBKuzEPBogtdmK9pgqDiXP',
-  },
-  {
-    id: '100248588',
-    code: 'EMP-90211',
-    name: 'Sarah Jenkins',
-    email: 's.jenkins@monogram.com',
-    age: 28,
-    department: 'Marketing',
-    skills: ['SEO', 'Copywriting'],
-    status: 'ON_LEAVE',
-    createdAt: 'Nov 05, 2023',
-    createdBy: 'Alex Rivera',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAFenqHvzCnx-sJjF8k_ciLFq6eegi3x_UYP2d_NU0wzBonzVzKfSagIY_rPlfEYojxEC20bu_3Il_EFLwgBLQmScR-noT8cG2u9qqrxZ3GjPBMbPKiDs6XcXWg6PtSpAnrw3I2zr6sqjJthqzlg52ZlHOJog1het02cKrxUwWYgJywkzlLSmKbP_TAo6GU4_xxBAI90uvmaNDeX_cgxFDF8tIChjlV-esMWEOFb0arQCaKmrr5yisPNyDm9xXSN_RhR0wKUCtJuVpM',
-  },
-  {
-    id: '100248591',
-    code: 'EMP-90212',
-    name: 'Robert Downey',
-    email: 'r.downey@monogram.com',
-    age: 45,
-    department: 'Finance',
-    skills: ['Auditing'],
-    status: 'ACTIVE',
-    createdAt: 'Dec 01, 2023',
-    createdBy: 'System Admin',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuA4Tl-sadOvUlhtypDxlCBBCjC0z6zYZIMXDNzKAb_g9kD6kyAse1gG2Uo6F4fu-FvkqEuzCt0lMhyb5cxOAc_D85jclFPKpIwvHKkYSO_4uQKS-xAS2vJzlOC3ZhHsM4brwtQdFnxEEK8PPWnig2RpJj-H1c8ihr2kZUWg8Srcb1L2f46m4_T89hY9JxUI4gpMMITHxRktGYwXStyPaZQxVpmil3ts7C45vpuJrA_nR_iuR7pP2A_VO90bwjYCNmpO98FrKKajeJy9',
-  },
-  {
-    id: '100248602',
-    code: 'EMP-90213',
-    name: 'Lena Meyer',
-    email: 'lena.m@monogram.com',
-    age: 31,
-    department: 'Design',
-    skills: ['Figma', 'UI/UX'],
-    status: 'INACTIVE',
-    createdAt: 'Jan 14, 2024',
-    createdBy: 'Alex Rivera',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuADN4KartDeUB6Jt_lKrWHfDWgttzjtvJAHkpWcn8M67vxn2kkx77yjQoIgSIC_ZILX3vez9dCITeuNYLfYxftutC3HOoZngukN37qTPIGehLkZoeXB1KR4UBlfXYyd5RsrrlRt1KVlNcD-d1vBRLF_wLInSmjfMJKEAfVJlFjhKx7VBEQ-DmdIIGhmXZcZfKiIgXZMhMUjcAKP4J1b3nUsmEjfN2HXWuo-RJs7Hp4cOQoqLwYNr-rwyi8iE4StcBKK46-CeCv1p6Bc',
-  },
-]
+const seedRows: EmployeeRow[] = []
 
 const rows = ref<EmployeeRow[]>([...seedRows])
 
