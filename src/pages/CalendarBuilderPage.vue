@@ -21,6 +21,7 @@ import {
   defaultCalendarDateNote,
   formatDisplayDate,
   formatMonthLabel,
+  getDateKeysInRange,
   getMonthDateKeys,
   getMonthsForView,
   summarizeMonths,
@@ -54,6 +55,8 @@ const focusMonth = ref("2026-04");
 const selectedType = ref<CalendarEditorSelection>("NORMAL");
 const assignmentLabel = ref("");
 const selectedDate = ref<string | null>(null);
+const rangeStart = ref<string | null>(null);
+const rangeEnd = ref<string | null>(null);
 const viewMode = ref<CalendarViewMode>("MONTH");
 const saving = ref(false);
 const loadingDetails = ref(false);
@@ -170,7 +173,7 @@ const compiledCalendarRequest = computed<CompanyCalendarRequest>(() => ({
       dayType: item.type,
       note: item.label?.trim() || defaultCalendarDateNote(item.type),
     }))
-    .sort((a, b) => a.calDate.localeCompare(b.calDate)),
+    .sort((left, right) => left.calDate.localeCompare(right.calDate)),
 }));
 
 watch(
@@ -187,6 +190,8 @@ async function initializeEditor() {
   selectedDate.value = null;
   assignmentLabel.value = "";
   selectedType.value = "NORMAL";
+  rangeStart.value = null;
+  rangeEnd.value = null;
   viewMode.value = "MONTH";
 
   if (!isEditMode.value) {
@@ -213,6 +218,8 @@ function moveRange(direction: -1 | 1) {
 
 function applyDaySelection(date: string) {
   selectedDate.value = date;
+  error.value = "";
+  message.value = "";
   const nextType = selectedType.value;
 
   if (nextType === "CLEAR_DATE") {
@@ -221,10 +228,40 @@ function applyDaySelection(date: string) {
   }
 
   assignments.value = assignments.value.filter((item) => item.date !== date);
-
-  assignments.value = [...assignments.value, createAssignment(date, nextType, assignmentLabel.value)].sort((a, b) =>
-    a.date.localeCompare(b.date),
+  assignments.value = [...assignments.value, createAssignment(date, nextType, assignmentLabel.value)].sort((left, right) =>
+    left.date.localeCompare(right.date),
   );
+}
+
+function applyRangeSelection() {
+  error.value = "";
+  message.value = "";
+
+  if (!rangeStart.value || !rangeEnd.value) {
+    error.value = t("calendar.builder.validation.batchDatesRequired");
+    return;
+  }
+  if (rangeStart.value > rangeEnd.value) {
+    error.value = t("calendar.builder.validation.batchDateRangeInvalid");
+    return;
+  }
+
+  const dates = getDateKeysInRange(rangeStart.value, rangeEnd.value);
+  const dateSet = new Set(dates);
+  const retainedAssignments = assignments.value.filter((item) => !dateSet.has(item.date));
+
+  if (selectedType.value === "CLEAR_DATE") {
+    assignments.value = retainedAssignments;
+    message.value = t("calendar.builder.messages.dateRangeApplied", { count: dates.length });
+    return;
+  }
+
+  assignments.value = [
+    ...retainedAssignments,
+    ...dates.map((date) => createAssignment(date, selectedType.value as CalendarDayType, assignmentLabel.value)),
+  ].sort((left, right) => left.date.localeCompare(right.date));
+  selectedDate.value = dates[dates.length - 1] ?? selectedDate.value;
+  message.value = t("calendar.builder.messages.dateRangeApplied", { count: dates.length });
 }
 
 async function loadCalendarDates(code: string) {
@@ -238,7 +275,7 @@ async function loadCalendarDates(code: string) {
     assignments.value = items
       .map(normalizeAssignment)
       .filter((item): item is CalendarAssignment => item !== null)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((left, right) => left.date.localeCompare(right.date));
 
     if (assignments.value.length > 0) {
       focusMonth.value = assignments.value[0].date.slice(0, 7);
@@ -261,6 +298,10 @@ async function saveCalendar() {
   }
   if (!compiledCalendarRequest.value.effectiveFrom || !compiledCalendarRequest.value.effectiveTo) {
     error.value = t("calendar.builder.validation.effectiveDatesRequired");
+    return;
+  }
+  if (compiledCalendarRequest.value.effectiveFrom < getTodayDateKey()) {
+    error.value = t("calendar.builder.validation.pastEffectiveFrom");
     return;
   }
   if (!compiledCalendarRequest.value.region) {
@@ -433,6 +474,14 @@ function asRecord(value: unknown) {
 
   return null;
 }
+
+function getTodayDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 </script>
 
 <template>
@@ -537,6 +586,30 @@ function asRecord(value: unknown) {
                     : t('calendar.builder.hints.assignmentLabel')
                 "
               />
+
+              <section class="space-y-4 border-t border-primary/10 pt-5">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ t('calendar.builder.sections.batchAssignment') }}</h3>
+                  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('calendar.builder.hints.batchAssignment') }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <UiInput
+                    v-model="rangeStart"
+                    :label="t('calendar.builder.fields.batchStartDate')"
+                    type="date"
+                  />
+                  <UiInput
+                    v-model="rangeEnd"
+                    :label="t('calendar.builder.fields.batchEndDate')"
+                    type="date"
+                  />
+                </div>
+
+                <UiButton block leading-icon="date_range" @click="applyRangeSelection">
+                  {{ t('calendar.builder.actions.applyDateRange') }}
+                </UiButton>
+              </section>
             </UiCardBody>
           </UiCard>
 
@@ -593,6 +666,8 @@ function asRecord(value: unknown) {
                 :month="visibleMonths[0]"
                 :assignments="assignments"
                 :selected-date="selectedDate"
+                :range-start="rangeStart"
+                :range-end="rangeEnd"
                 interactive
                 @select-day="applyDaySelection"
               />
@@ -604,6 +679,8 @@ function asRecord(value: unknown) {
                   :month="month"
                   :assignments="assignments"
                   :selected-date="selectedDate"
+                  :range-start="rangeStart"
+                  :range-end="rangeEnd"
                   compact
                   interactive
                   @select-day="applyDaySelection"
@@ -617,6 +694,8 @@ function asRecord(value: unknown) {
                   :month="month"
                   :assignments="assignments"
                   :selected-date="selectedDate"
+                  :range-start="rangeStart"
+                  :range-end="rangeEnd"
                   compact
                   interactive
                   @select-day="applyDaySelection"

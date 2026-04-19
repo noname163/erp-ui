@@ -146,6 +146,7 @@ export default {
     hrOverview: 'HR Overview',
     employeeDirectory: 'Employee Directory',
     policyManagement: 'Policy Management',
+    salaryTemplate: 'Salary Template',
     newPolicy: 'New Policy',
     payrollComponents: 'Payroll Components',
     payrollRuns: 'Payroll Runs',
@@ -284,8 +285,25 @@ export default {
       results: '{count} results',
       loading: 'Loading employees...',
       emptyTitle: 'No employees found.',
-      loadFailed: 'Unable to load employees from API. Showing sample data.',
+      loadFailed: 'Unable to load employees from API.',
       showing: 'Showing {start} to {end} of {total} employees',
+      emptyDescription: 'Try adjusting the search or filters, or add a new employee record.',
+      actions: {
+        showFilters: 'Show Filters',
+        hideFilters: 'Hide Filters',
+      },
+      filters: {
+        name: 'Employee Name',
+        namePlaceholder: 'Filter by employee name',
+        department: 'Department',
+        status: 'Status',
+        skill: 'Skill',
+        skillPlaceholder: 'Filter by skill',
+        minAge: 'Minimum Age',
+        maxAge: 'Maximum Age',
+        allDepartments: 'All Departments',
+        allStatuses: 'All Statuses',
+      },
     },
     create: {
       breadcrumb: 'Employees',
@@ -386,6 +404,7 @@ export default {
     errors: {
       loadEmployees: 'Failed to load employees',
       createFailed: 'Create daily work failed',
+      currentEmployeeUnavailable: 'Current employee profile is unavailable for this account.',
     },
   },
   logWorkList: {
@@ -404,6 +423,8 @@ export default {
       isPto: 'Is PTO',
     },
     actions: {
+      showFilters: 'Show Filters',
+      hideFilters: 'Hide Filters',
       moreFilters: 'More Filters',
       addLog: 'Add Log',
       exportLogs: 'Export Logs',
@@ -539,6 +560,7 @@ export default {
         newCalendar: 'New Calendar',
       },
       actions: {
+        applyDateRange: 'Apply Date Range',
         backToList: 'Back to List',
         saveCalendarTemplate: 'Save Calendar Template',
         saveChanges: 'Save Changes',
@@ -547,6 +569,7 @@ export default {
       editBanner:
         'Viewing calendar {code} in edit layout. Dates are loaded from /api/company-calendars/{code}/dates and saved with PUT /api/company-calendars/{code}.',
       sections: {
+        batchAssignment: 'Batch Assignment',
         configuration: 'Configuration',
         configurationCreateHint: 'Core metadata for the calendar template.',
         configurationEditHint: 'Metadata passed from the calendar list selection.',
@@ -561,6 +584,8 @@ export default {
           'Regional operating calendar for warehouse, support, and finance teams. Use date assignments to mark holidays, shutdowns, and weekend coverage.',
       },
       fields: {
+        batchStartDate: 'Start Date',
+        batchEndDate: 'End Date',
         calendarName: 'Calendar Name',
         notes: 'Notes',
         notesPlaceholder: 'Describe the teams or rules covered by this calendar...',
@@ -568,10 +593,14 @@ export default {
         assignmentPlaceholder: 'Optional note for the next clicked date',
       },
       hints: {
+        batchAssignment: 'Apply the selected day type across a full date range in one step.',
         clearMode: 'Clear mode does not use labels. Click dates to remove overrides.',
         assignmentLabel: 'Used for holidays, day-offs, and special coverage labels.',
       },
       validation: {
+        pastEffectiveFrom: 'Effective from date cannot be in the past.',
+        batchDatesRequired: 'Start date and end date are required for batch assignment.',
+        batchDateRangeInvalid: 'End date must be on or after the start date.',
         nameRequired: 'Calendar name is required.',
         effectiveDatesRequired: 'Effective dates are required.',
         regionRequired: 'Region is required.',
@@ -584,6 +613,7 @@ export default {
         createFailed: 'Create company calendar failed',
       },
       messages: {
+        dateRangeApplied: '{count} dates updated.',
         unexpectedStatus: 'Calendar saved with status {status}.',
       },
       loadingDates: 'Loading calendar dates...',
@@ -1036,6 +1066,8 @@ export default {
       },
       actions: {
         addSalary: 'Add Salary',
+        showFilters: 'Show Filters',
+        hideFilters: 'Hide Filters',
         applyFilters: 'Apply Filters',
       },
       messages: {

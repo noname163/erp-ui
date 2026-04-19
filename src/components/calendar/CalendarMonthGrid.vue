@@ -14,6 +14,8 @@ type Props = {
   compact?: boolean;
   interactive?: boolean;
   selectedDate?: string | null;
+  rangeStart?: string | null;
+  rangeEnd?: string | null;
 };
 
 type CalendarCell = {
@@ -30,6 +32,8 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   interactive: false,
   selectedDate: null,
+  rangeStart: null,
+  rangeEnd: null,
 });
 const { t, locale } = useI18n();
 
@@ -123,6 +127,16 @@ function selectedClass(cell: CalendarCell) {
   return "ring-2 ring-slate-900 dark:ring-white";
 }
 
+function rangeClass(cell: CalendarCell) {
+  if (!cell.inMonth || !props.rangeStart || !props.rangeEnd) return "";
+
+  const start = props.rangeStart <= props.rangeEnd ? props.rangeStart : props.rangeEnd;
+  const end = props.rangeStart <= props.rangeEnd ? props.rangeEnd : props.rangeStart;
+  if (cell.date < start || cell.date > end) return "";
+
+  return "ring-2 ring-primary/30 dark:ring-primary/40";
+}
+
 function selectDay(cell: CalendarCell) {
   if (!props.interactive || !cell.inMonth) return;
   emit("select-day", cell.date);
@@ -156,6 +170,7 @@ function selectDay(cell: CalendarCell) {
           :class="[
             compact ? 'min-h-[74px] p-2' : 'min-h-[118px] p-3',
             cardClass(cell),
+            rangeClass(cell),
             selectedClass(cell),
             interactive && cell.inMonth ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-sm' : '',
           ]"

@@ -317,6 +317,22 @@ export function getMonthDateKeys(month: string) {
   );
 }
 
+export function getDateKeysInRange(startDate: string, endDate: string) {
+  const start = parseDateKey(startDate);
+  const end = parseDateKey(endDate);
+  const from = start <= end ? start : end;
+  const to = start <= end ? end : start;
+  const dates: string[] = [];
+
+  const cursor = new Date(from);
+  while (cursor <= to) {
+    dates.push(toDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}
+
 export function formatMonthLabel(month: string, short = false) {
   return new Intl.DateTimeFormat(getIntlLocale(), {
     month: short ? "short" : "long",

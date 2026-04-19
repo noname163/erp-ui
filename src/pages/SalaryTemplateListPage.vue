@@ -10,11 +10,20 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { AppRoute } from '@/types'
-import { salaryService, type SalaryTemplateSummary } from '@/services/salary.service'
+import {
+  calculateSalaryTemplateTotal,
+  normalizeSalaryTemplateTotalLines,
+  salaryService,
+  type SalaryComponentRule,
+  type SalaryTemplateSummary,
+  type SalaryTemplateTotalLine,
+} from '@/services/salary.service'
 import { useI18n } from '@/i18n'
 
 type SalaryTemplateRow = SalaryTemplateSummary & {
   id: string
+  code: string
+  derivedTotalAmount?: string
 }
 
 const router = useRouter()
@@ -31,6 +40,8 @@ const pageSize = 8
 const rows = ref<SalaryTemplateRow[]>([])
 const totalElements = ref(0)
 const totalPages = ref(1)
+const componentRules = ref<SalaryComponentRule[]>([])
+const templateDetailsCache = ref<Record<string, SalaryTemplateTotalLine[]>>({})
 
 const headers = computed<UiTableHeader[]>(() => [
   { key: 'name', label: t('common.field.name'), thClass: 'min-w-[220px]' },
@@ -46,6 +57,7 @@ const headers = computed<UiTableHeader[]>(() => [
 function normalizeRows(data: any[]): SalaryTemplateRow[] {
   return data.map((item: any, index: number) => ({
     id: String(item?.id ?? item?.code ?? item?.name ?? `template-${index}`),
+    code: String(item?.code ?? item?.id ?? item?.name ?? `template-${index}`),
     name: String(item?.name ?? ''),
     description: item?.description ? String(item.description) : '',
     effectiveFrom: String(item?.effectiveFrom ?? ''),
@@ -56,9 +68,60 @@ function normalizeRows(data: any[]): SalaryTemplateRow[] {
   }))
 }
 
+async function ensureComponentRules() {
+  if (componentRules.value.length > 0) return componentRules.value
+
+  try {
+    componentRules.value = await salaryService.componentRules({ page: 0, size: 500, sortDir: 'ASC' })
+  } catch {
+    componentRules.value = []
+  }
+
+  return componentRules.value
+}
+
+async function ensureTemplateDetails(code: string) {
+  if (templateDetailsCache.value[code]) return templateDetailsCache.value[code]
+
+  try {
+    const res = await salaryService.templateDetails(code)
+    templateDetailsCache.value = {
+      ...templateDetailsCache.value,
+      [code]: normalizeSalaryTemplateTotalLines(res),
+    }
+  } catch {
+    templateDetailsCache.value = {
+      ...templateDetailsCache.value,
+      [code]: [],
+    }
+  }
+
+  return templateDetailsCache.value[code]
+}
+
+async function enrichRowsWithDerivedTotals(baseRows: SalaryTemplateRow[]) {
+  if (baseRows.length === 0) return baseRows
+
+  const rules = await ensureComponentRules()
+  await Promise.all(baseRows.map((row) => ensureTemplateDetails(row.code)))
+
+  return baseRows.map((row) => {
+    const detailLines = templateDetailsCache.value[row.code] ?? []
+    const derivedTotalAmount = detailLines.length > 0
+      ? calculateSalaryTemplateTotal(detailLines, rules)
+      : String(row.totalAmount ?? 0)
+
+    return {
+      ...row,
+      derivedTotalAmount,
+    }
+  })
+}
+
 async function loadTemplates() {
   loading.value = true
   error.value = ''
+
   try {
     const res = await salaryService.listTemplates({
       name: name.value.trim() || undefined,
@@ -72,7 +135,8 @@ async function loadTemplates() {
     })
 
     const data = (res?.content ?? res?.data ?? res?.templates ?? []) as any[]
-    rows.value = Array.isArray(data) ? normalizeRows(data) : []
+    const normalizedRows = Array.isArray(data) ? normalizeRows(data) : []
+    rows.value = await enrichRowsWithDerivedTotals(normalizedRows)
     totalElements.value = Number(res?.totalElements ?? rows.value.length ?? 0)
     totalPages.value = Math.max(1, Number(res?.totalPages ?? Math.ceil(totalElements.value / pageSize) ?? 1))
   } catch (e: any) {
@@ -88,10 +152,10 @@ async function loadTemplates() {
 onMounted(loadTemplates)
 
 const currencyOptions = computed(() => {
-  const values = Array.from(new Set(rows.value.map((r) => (r.currency ?? 'USD').toUpperCase())))
+  const values = Array.from(new Set(rows.value.map((row) => (row.currency ?? 'USD').toUpperCase())))
   return [
     { value: 'ALL', label: t('salaryTemplates.list.currencyAll') },
-    ...values.map((v) => ({ value: v, label: t('salaryTemplates.list.currencyOption', { currency: v }) })),
+    ...values.map((value) => ({ value, label: t('salaryTemplates.list.currencyOption', { currency: value }) })),
   ]
 })
 
@@ -108,15 +172,16 @@ function formatDate(value?: string | null) {
 }
 
 function formatAmount(row: SalaryTemplateRow) {
-  const n = typeof row.totalAmount === 'number' ? row.totalAmount : Number(String(row.totalAmount).replaceAll(',', ''))
-  const normalized = Number.isFinite(n) ? n : 0
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: row.currency ?? 'USD' }).format(normalized)
+  const amount = row.derivedTotalAmount ?? String(row.totalAmount ?? 0)
+  const numericValue = Number(String(amount).replaceAll(',', ''))
+  const normalizedValue = Number.isFinite(numericValue) ? numericValue : 0
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: row.currency ?? 'USD' }).format(normalizedValue)
 }
 
 function initials(name?: string) {
   const words = (name ?? '').trim().split(/\s+/).filter(Boolean)
   if (words.length === 0) return 'U'
-  return words.slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
+  return words.slice(0, 2).map((word) => word[0]?.toUpperCase() ?? '').join('')
 }
 
 async function applyFilters() {
@@ -212,9 +277,9 @@ async function changePage(next: number) {
 
             <template #cell-currency="{ row }">
               <div class="flex justify-center">
-              <UiBadge variant="info">{{ row.currency ?? 'USD' }}</UiBadge>
-            </div>
-          </template>
+                <UiBadge variant="info">{{ row.currency ?? 'USD' }}</UiBadge>
+              </div>
+            </template>
 
             <template #cell-totalAmount="{ row }">
               <span class="font-bold text-slate-900 dark:text-white">{{ formatAmount(row) }}</span>

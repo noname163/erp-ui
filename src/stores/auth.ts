@@ -55,7 +55,7 @@ export const useAuthStore = defineStore("auth", {
 
       // API returns JWT in cookie; response may include profile/roles depending on backend
       this.isAuthenticated = true;
-      this.user = extractUser(data.data);
+      this.user = extractUser(data);
       localStorage.setItem(
         LS_AUTH,
         JSON.stringify({ isAuthenticated: true, user: this.user, roles }),
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore("auth", {
         (localStorage.getItem(LS_ROLE) as RoleCode | null) ?? null;
       const nextRole =
         existing && roles.includes(existing) ? existing : (roles[0] ?? null);
-      if (nextRole) this.setRole(data.role);
+      if (nextRole) this.setRole(nextRole);
 
       return { firstLogin: !!data?.data?.firstLogin };
     },
@@ -110,6 +110,7 @@ export const useAuthStore = defineStore("auth", {
 
 const ROLE_CODES: RoleCode[] = [
   "SYSTEM_ADMIN",
+  "ADMIN",
   "HUMAN_RESOURCES",
   "COMPANY_MANAGER",
   "EMPLOYEE",
@@ -146,7 +147,47 @@ function extractRoles(data: any): RoleCode[] {
 }
 
 function extractUser(data: any): UserProfile {
-  const fullName = data.fullName;
-  const singleRole = data.role;
-  return { email: data.email, fullName, role: singleRole };
+  const record = data?.data ?? data ?? {};
+  const nestedUser = record.user ?? {};
+  const fullName = firstString(
+    record.fullName,
+    record.name,
+    nestedUser.fullName,
+    nestedUser.name,
+  );
+  const email = firstString(record.email, nestedUser.email);
+  const userProfileCode = firstString(
+    record.userProfileCode,
+    record.code,
+    record.employeeCode,
+    nestedUser.userProfileCode,
+    nestedUser.code,
+    nestedUser.employeeCode,
+  );
+  const singleRole = firstRole(
+    record.role,
+    record.roleCode,
+    nestedUser.role,
+    nestedUser.roleCode,
+  );
+
+  return {
+    email,
+    fullName,
+    role: singleRole,
+    roles: extractRoles(data),
+    userProfileCode,
+  };
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+  }
+
+  return "";
+}
+
+function firstRole(...values: unknown[]) {
+  return values.find(isRoleCode);
 }

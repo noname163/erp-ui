@@ -11,25 +11,33 @@ import UiSearchSelect, { type UiSearchSelectOption } from '@/components/ui/UiSea
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { dailyWorkService, type DailyWorkUnit, type WorkType } from '@/services/daily-work.service'
+<<<<<<< Updated upstream
+import { AppRoute } from '@/types'
+
+const router = useRouter()
+=======
 import { userProfileService } from '@/services/user-profile.service'
 import { useI18n } from '@/i18n'
+import { useAuthStore } from '@/stores/auth'
 import { AppRoute } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
+const auth = useAuthStore()
 const { t } = useI18n()
+>>>>>>> Stashed changes
 
 const loading = ref(false)
 const loadingEmployees = ref(false)
 const error = ref('')
 const message = ref('')
-const selectedWorkCode = computed(() => {
-  const code = route.query.code
-  return typeof code === 'string' ? code : ''
-})
 
-const defaultForm = () => ({
-  userProfileCode: '',
+const isEmployeeRole = computed(() => auth.activeRole === 'EMPLOYEE')
+const currentUserProfileCode = computed(() => auth.user?.userProfileCode?.trim() ?? '')
+const currentUserLabel = computed(() => auth.user?.fullName || auth.user?.email || currentUserProfileCode.value)
+
+const createDefaultForm = () => ({
+  userProfileCode: isEmployeeRole.value ? currentUserProfileCode.value : '',
   workingDate: '',
   startTime: '09:00',
   endTime: '17:00',
@@ -41,8 +49,36 @@ const defaultForm = () => ({
   description: '',
 })
 
+<<<<<<< Updated upstream
 const form = ref(defaultForm())
 
+const employeeOptions = [
+  {
+    value: 'EMP-001',
+    label: 'John Doe',
+    subtitle: 'Senior Software Engineer',
+    avatarUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCWJWqEACDCp7b4ZK1Z8D2DF3NZn1QBd5WlCrOjlj2ziGRcMEVx-F3EgdMtd9oufp0EQ9pfpb_8UHEqgjs27NEx2xSz7J8wuJ0-F87vuyCcpukfsBKF1qJ7rr1aURquQM06RNIqMMYaJnlyr6hsXerFgRKTyBJw-lsrFKR5EpzGyYILr2VuGiQERrP5eqcfffGJIv_OmNzRkCZPoI11xx3Cd5f1EjjqA7mzqlqOr-rRINaL4bUqB_9evxLuHknia9mD9G2xoor7VrVo',
+  },
+  { value: 'EMP-042', label: 'John Smith', subtitle: 'Project Manager' },
+  { value: 'EMP-089', label: 'Johnathan Johnson', subtitle: 'QA Specialist' },
+]
+
+const unitOptions = [
+  { value: 'HOUR', label: 'HOUR' },
+  { value: 'DAY', label: 'DAY' },
+  { value: 'PRODUCT', label: 'PRODUCT' },
+]
+const workTypeOptions = [
+  { value: 'NORMAL', label: 'NORMAL' },
+  { value: 'HOLIDAY_WORK', label: 'HOLIDAY_WORK' },
+  { value: 'WEEKEND_WORK', label: 'WEEKEND_WORK' },
+  { value: 'PTO_PAID', label: 'PTO_PAID' },
+  { value: 'PTO_UNPAID', label: 'PTO_UNPAID' },
+  { value: 'UNPAID_LEAVE', label: 'UNPAID_LEAVE' },
+]
+=======
+const form = ref(createDefaultForm())
 const employeeOptions = ref<UiSearchSelectOption[]>([])
 
 const unitOptions = computed(() => [
@@ -50,6 +86,7 @@ const unitOptions = computed(() => [
   { value: 'DAY', label: t('logWork.options.unit.day') },
   { value: 'PRODUCT', label: t('logWork.options.unit.product') },
 ])
+
 const workTypeOptions = computed(() => [
   { value: 'NORMAL', label: t('logWork.options.workType.normal') },
   { value: 'HOLIDAY_WORK', label: t('logWork.options.workType.holidayWork') },
@@ -58,12 +95,31 @@ const workTypeOptions = computed(() => [
   { value: 'PTO_UNPAID', label: t('logWork.options.workType.ptoUnpaid') },
   { value: 'UNPAID_LEAVE', label: t('logWork.options.workType.unpaidLeave') },
 ])
+>>>>>>> Stashed changes
 
-const canSubmit = computed(() => !loading.value)
+const canSubmit = computed(() =>
+  Boolean(
+    !loading.value &&
+      form.value.userProfileCode &&
+      form.value.workingDate &&
+      form.value.startTime &&
+      form.value.endTime &&
+      form.value.quantity &&
+      form.value.unit &&
+      form.value.workType,
+  ),
+)
 
-function normalizeUserOptions(res: any): UiSearchSelectOption[] {
+<<<<<<< Updated upstream
+function cancel() {
+  form.value = defaultForm()
+=======
+function resolveOptionCollection(res: any) {
   const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
-  if (!Array.isArray(raw)) return []
+  return Array.isArray(raw) ? raw : []
+}
+
+function normalizeUserOptions(raw: any[]): UiSearchSelectOption[] {
   return raw
     .map((item: any) => {
       const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
@@ -77,31 +133,83 @@ function normalizeUserOptions(res: any): UiSearchSelectOption[] {
     .filter((item: UiSearchSelectOption | null): item is UiSearchSelectOption => Boolean(item))
 }
 
+function resolveCurrentEmployeeOption(raw: any[]) {
+  const currentCode = currentUserProfileCode.value
+  const currentName = auth.user?.fullName?.trim().toLowerCase() ?? ''
+  const currentEmail = auth.user?.email?.trim().toLowerCase() ?? ''
+
+  const match = raw.find((item: any) => {
+    const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
+    const name = String(item?.name ?? item?.fullName ?? '').trim().toLowerCase()
+    const email = String(item?.email ?? '').trim().toLowerCase()
+    return value === currentCode || (currentName.length > 0 && name === currentName) || (currentEmail.length > 0 && email === currentEmail)
+  })
+
+  if (!match && !currentCode) return null
+
+  const value = String(match?.code ?? match?.userProfileCode ?? match?.id ?? currentCode).trim()
+  const label = String(match?.name ?? match?.fullName ?? match?.email ?? currentUserLabel.value).trim()
+  if (!value) return null
+  return { value, label }
+}
+
 async function loadEmployeeOptions() {
   loadingEmployees.value = true
+
   try {
     const res = await userProfileService.options({ page: 0, size: 200, sortDir: 'ASC' })
-    employeeOptions.value = normalizeUserOptions(res)
+    const raw = resolveOptionCollection(res)
+
+    if (isEmployeeRole.value) {
+      const currentOption = resolveCurrentEmployeeOption(raw)
+      if (!currentOption) {
+        error.value = t('logWork.errors.currentEmployeeUnavailable')
+        employeeOptions.value = []
+        return
+      }
+
+      employeeOptions.value = [currentOption]
+      form.value.userProfileCode = currentOption.value
+      return
+    }
+
+    employeeOptions.value = normalizeUserOptions(raw)
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? t('logWork.errors.loadEmployees')
+    if (isEmployeeRole.value && currentUserProfileCode.value) {
+      employeeOptions.value = [{ value: currentUserProfileCode.value, label: currentUserLabel.value }]
+      form.value.userProfileCode = currentUserProfileCode.value
+    } else {
+      error.value = e?.response?.data?.message ?? t('logWork.errors.loadEmployees')
+    }
   } finally {
     loadingEmployees.value = false
   }
 }
 
-function cancel() {
-  form.value = defaultForm()
+function resetForm() {
+  form.value = createDefaultForm()
+  if (isEmployeeRole.value) {
+    form.value.userProfileCode = currentUserProfileCode.value
+  }
+>>>>>>> Stashed changes
   error.value = ''
   message.value = ''
 }
 
 async function submit() {
+  if (isEmployeeRole.value && !currentUserProfileCode.value) {
+    error.value = t('logWork.errors.currentEmployeeUnavailable')
+    return
+  }
+
   loading.value = true
   error.value = ''
   message.value = ''
+
   try {
     const payload = [{
       ...form.value,
+      userProfileCode: isEmployeeRole.value ? currentUserProfileCode.value : form.value.userProfileCode,
       quantity: Number(form.value.quantity),
       otTime: Number(form.value.otTime),
       description: undefined,
@@ -114,10 +222,18 @@ async function submit() {
     loading.value = false
   }
 }
+<<<<<<< Updated upstream
+=======
 
 onMounted(() => {
-  loadEmployeeOptions()
+  if (isEmployeeRole.value && !currentUserProfileCode.value) {
+    error.value = t('logWork.errors.currentEmployeeUnavailable')
+    return
+  }
+
+  void loadEmployeeOptions()
 })
+>>>>>>> Stashed changes
 </script>
 
 <template>
@@ -154,9 +270,15 @@ onMounted(() => {
               :options="employeeOptions"
               :section-title="t('logWork.sections.employeeSelection')"
               sectionIcon="badge"
+<<<<<<< Updated upstream
+              label="Select Employee"
+              placeholder="Search by name or ID..."
+=======
               :label="t('logWork.fields.employee')"
               :placeholder="t('logWork.fields.employeePlaceholder')"
-              :disabled="loadingEmployees"
+              :disabled="loadingEmployees || isEmployeeRole"
+              :allow-free-text="false"
+>>>>>>> Stashed changes
               required
             />
 
@@ -215,7 +337,7 @@ onMounted(() => {
                 type="button"
                 class="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                 :disabled="loading"
-                @click="cancel"
+                @click="resetForm"
               >
                 {{ t('common.action.cancel') }}
               </button>

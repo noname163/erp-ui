@@ -6,9 +6,20 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
-import { salaryService, type SalaryTemplateRequest, type SalaryTemplateDetailRequest, type SelectionOptionResponse } from '@/services/salary.service'
+<<<<<<< Updated upstream
+import { salaryService, type SalaryTemplateRequest, type SalaryTemplateDetailRequest } from '@/services/salary.service'
+=======
+import {
+  calculateSalaryTemplateTotal,
+  salaryService,
+  type SalaryComponentRule,
+  type SalaryTemplateDetailRequest,
+  type SalaryTemplateRequest,
+  type SelectionOptionResponse,
+} from '@/services/salary.service'
 import { useI18n } from '@/i18n'
 import { AppRoute } from '@/types'
+>>>>>>> Stashed changes
 
 const loading = ref(false)
 const loadingOptions = ref(false)
@@ -35,28 +46,32 @@ const template = ref<SalaryTemplateForm>({
   currency: 'VND',
 })
 
+<<<<<<< Updated upstream
+const unitOptions = [
+  { value: 'MONTH', label: 'MONTH' },
+  { value: 'DAY', label: 'DAY' },
+  { value: 'HOUR', label: 'HOUR' },
+  { value: 'PRODUCT', label: 'PRODUCT' },
+]
+=======
 const salaryCodeOptions = ref<{ value: string; label: string }[]>([])
 const unitOptions = ref<{ value: string; label: string }[]>([])
+const componentRules = ref<SalaryComponentRule[]>([])
 const dependencySalaryOptions = computed(() => [
   { value: '', label: t('salaryTemplates.builder.noDependency') },
   ...salaryCodeOptions.value,
 ])
+>>>>>>> Stashed changes
 
-const details = ref<SalaryTemplateDetailRow[]>([
-  { salaryCode: 'BASE', amount: '15000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '1', dependencyCode: '' },
-  { salaryCode: 'ALLOWANCE', amount: '3000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '2', dependencyCode: '' },
+const details = ref<SalaryTemplateDetailRequest[]>([
+  { salaryCode: 'BASE', amount: '15000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '1' },
+  { salaryCode: 'ALLOWANCE', amount: '3000000', quantity: '1', unitCode: 'MONTH', sequenceOrder: '2' },
 ])
 
-function parseAmount(value: string) {
-  const normalized = value.replaceAll(',', '').trim()
-  const n = Number(normalized)
-  return Number.isFinite(n) ? n : 0
-}
-
-const totalAmount = computed(() => details.value.reduce((sum, d) => sum + parseAmount(d.amount), 0))
+const totalAmount = computed(() => calculateSalaryTemplateTotal(details.value, componentRules.value))
 
 watchEffect(() => {
-  template.value.totalAmount = String(totalAmount.value)
+  template.value.totalAmount = totalAmount.value
 })
 
 function addDetail() {
@@ -70,14 +85,15 @@ function addDetail() {
   })
 }
 
-function removeDetail(i: number) {
-  details.value.splice(i, 1)
+function removeDetail(index: number) {
+  details.value.splice(index, 1)
 }
 
 async function submit() {
   loading.value = true
   error.value = ''
   message.value = ''
+
   try {
     const res = await salaryService.createTemplate({ ...template.value, details: details.value })
     if (res?.status === 201) {
@@ -91,6 +107,8 @@ async function submit() {
     loading.value = false
   }
 }
+<<<<<<< Updated upstream
+=======
 
 function normalizeOptions(res: any): SelectionOptionResponse[] {
   const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
@@ -107,23 +125,25 @@ function mapUiOptions(items: SelectionOptionResponse[]) {
 async function loadOptions() {
   loadingOptions.value = true
   try {
-    const [salaryRes, unitRes] = await Promise.all([
+    const [salaryRes, unitRes, rules] = await Promise.all([
       salaryService.salaryOptions({ page: 0, size: 200, sortDir: 'ASC' }),
-      salaryService.systemUnitOptions({ type:"DURATION",page: 0, size: 200, sortDir: 'ASC' }),
+      salaryService.systemUnitOptions({ type: 'DURATION', page: 0, size: 200, sortDir: 'ASC' }),
+      salaryService.componentRules({ page: 0, size: 500, sortDir: 'ASC' }),
     ])
 
     salaryCodeOptions.value = mapUiOptions(normalizeOptions(salaryRes))
     unitOptions.value = mapUiOptions(normalizeOptions(unitRes))
+    componentRules.value = rules
 
     const firstSalaryCode = salaryCodeOptions.value[0]?.value ?? ''
     const firstUnit = unitOptions.value[0]?.value ?? ''
-    details.value = details.value.map((d) => ({
-      ...d,
-      salaryCode: salaryCodeOptions.value.some((x) => x.value === d.salaryCode) ? d.salaryCode : firstSalaryCode,
-      unitCode: unitOptions.value.some((x) => x.value === d.unitCode) ? d.unitCode : firstUnit,
+    details.value = details.value.map((detail) => ({
+      ...detail,
+      salaryCode: salaryCodeOptions.value.some((option) => option.value === detail.salaryCode) ? detail.salaryCode : firstSalaryCode,
+      unitCode: unitOptions.value.some((option) => option.value === detail.unitCode) ? detail.unitCode : firstUnit,
       dependencyCode:
-        d.dependencyCode && salaryCodeOptions.value.some((x) => x.value === d.dependencyCode)
-          ? d.dependencyCode
+        detail.dependencyCode && salaryCodeOptions.value.some((option) => option.value === detail.dependencyCode)
+          ? detail.dependencyCode
           : '',
     }))
   } catch (e: any) {
@@ -134,6 +154,7 @@ async function loadOptions() {
 }
 
 onMounted(loadOptions)
+>>>>>>> Stashed changes
 </script>
 
 <template>
@@ -169,9 +190,10 @@ onMounted(loadOptions)
           </div>
 
           <div class="space-y-4">
-            <div v-for="(d, i) in details" :key="i" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end border-b border-primary/10 pb-4">
+            <div v-for="(detail, index) in details" :key="index" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end border-b border-primary/10 pb-4">
               <div class="md:col-span-3">
-                <UiSelect v-model="d.salaryCode" :label="t('salaryTemplates.builder.fields.salaryCode')" :options="salaryCodeOptions" :disabled="loadingOptions" required />
+<<<<<<< Updated upstream
+                <UiInput v-model="d.salaryCode" label="Salary Code" required />
               </div>
               <div class="md:col-span-3">
                 <UiSelect v-model="d.dependencyCode" :label="t('salaryTemplates.builder.fields.dependencySalary')" :options="dependencySalaryOptions" :disabled="loadingOptions" />
@@ -188,8 +210,29 @@ onMounted(loadOptions)
               <div class="md:col-span-1">
                 <UiInput v-model="d.sequenceOrder" :label="t('salaryTemplates.builder.fields.sequenceOrder')" required />
               </div>
+              <div class="md:col-span-1 flex justify-end">
+                <button type="button" class="text-slate-500 hover:text-red-500" @click="removeDetail(i)">
+=======
+                <UiSelect v-model="detail.salaryCode" :label="t('salaryTemplates.builder.fields.salaryCode')" :options="salaryCodeOptions" :disabled="loadingOptions" required />
+              </div>
+              <div class="md:col-span-3">
+                <UiSelect v-model="detail.dependencyCode" :label="t('salaryTemplates.builder.fields.dependencySalary')" :options="dependencySalaryOptions" :disabled="loadingOptions" />
+              </div>
+              <div class="md:col-span-2">
+                <UiInput v-model="detail.amount" :label="t('common.field.amount')" required />
+              </div>
+              <div class="md:col-span-1">
+                <UiInput v-model="detail.quantity" :label="t('common.field.quantity')" required />
+              </div>
+              <div class="md:col-span-1">
+                <UiSelect v-model="detail.unitCode" :label="t('common.field.unit')" :options="unitOptions" :disabled="loadingOptions" required />
+              </div>
+              <div class="md:col-span-1">
+                <UiInput v-model="detail.sequenceOrder" :label="t('salaryTemplates.builder.fields.sequenceOrder')" required />
+              </div>
               <div class="md:col-span-1 flex items-center justify-end">
-                <button type="button" class="text-slate-500 hover:text-red-500" :title="t('common.action.delete')" @click="removeDetail(i)">
+                <button type="button" class="text-slate-500 hover:text-red-500" :title="t('common.action.delete')" @click="removeDetail(index)">
+>>>>>>> Stashed changes
                   <UiIcon name="delete" />
                 </button>
               </div>
