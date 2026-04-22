@@ -556,6 +556,7 @@ export default {
       },
       actions: {
         applyDateRange: '套用日期區間',
+        applyWeekdayPattern: '套用星期規則',
         backToList: '返回列表',
         saveCalendarTemplate: '儲存行事曆範本',
         saveChanges: '儲存變更',
@@ -564,7 +565,7 @@ export default {
       editBanner:
         '目前以編輯模式檢視行事曆 {code}。日期資料由 /api/company-calendars/{code}/dates 載入，並以 PUT /api/company-calendars/{code} 儲存。',
       sections: {
-        batchAssignment: '批次指派',
+        batchAssignment: '星期批次指派',
         configuration: '設定',
         configurationCreateHint: '行事曆範本的核心資訊。',
         configurationEditHint: '由行事曆列表選取時帶入的中繼資料。',
@@ -581,6 +582,8 @@ export default {
       fields: {
         batchStartDate: '開始日期',
         batchEndDate: '結束日期',
+        batchMonth: '月份',
+        batchWeekdays: '星期',
         calendarName: '行事曆名稱',
         notes: '備註',
         notesPlaceholder: '說明此行事曆涵蓋的團隊或規則...',
@@ -588,7 +591,7 @@ export default {
         assignmentPlaceholder: '下一個點選日期的選填備註',
       },
       hints: {
-        batchAssignment: '一次將所選日期類型套用到整個日期區間。',
+        batchAssignment: '一次將所選日期類型套用到所選月份中的指定星期。',
         clearMode: '清除模式不使用標籤。點選日期可移除明確覆寫。',
         assignmentLabel: '可用於假日、停班日與特殊支援班別標籤。',
       },
@@ -596,6 +599,8 @@ export default {
         pastEffectiveFrom: '生效起日不可早於今天。',
         batchDatesRequired: '批次指派需要開始日期與結束日期。',
         batchDateRangeInvalid: '結束日期必須等於或晚於開始日期。',
+        batchMonthRequired: '星期指派需要選擇月份。',
+        batchWeekdaysRequired: '請至少選擇一個星期。',
         nameRequired: '行事曆名稱為必填。',
         effectiveDatesRequired: '生效日期為必填。',
         regionRequired: '區域為必填。',
@@ -609,6 +614,7 @@ export default {
       },
       messages: {
         dateRangeApplied: '已更新 {count} 個日期。',
+        weekdayPatternApplied: '已更新 {month} 的 {count} 個日期。',
         unexpectedStatus: '行事曆已儲存，狀態為 {status}。',
       },
       loadingDates: '載入行事曆日期中...',

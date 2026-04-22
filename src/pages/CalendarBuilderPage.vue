@@ -21,7 +21,7 @@ import {
   defaultCalendarDateNote,
   formatDisplayDate,
   formatMonthLabel,
-  getDateKeysInRange,
+  getDateKeysForWeekdaysInMonth,
   getMonthDateKeys,
   getMonthsForView,
   summarizeMonths,
@@ -29,6 +29,7 @@ import {
 import type {
   CalendarAssignment,
   CalendarDayType,
+  CalendarWeekday,
   CalendarViewMode,
   CompanyCalendarDateResponse,
   CompanyCalendarRequest,
@@ -44,6 +45,12 @@ type CalendarEditorOption = {
   icon: string;
   dotClass: string;
 };
+type CalendarWeekdayOption = {
+  value: CalendarWeekday;
+  label: string;
+};
+
+const weekdaySortOrder: CalendarWeekday[] = [1, 2, 3, 4, 5, 6, 0];
 
 const router = useRouter();
 const route = useRoute();
@@ -55,8 +62,8 @@ const focusMonth = ref("2026-04");
 const selectedType = ref<CalendarEditorSelection>("NORMAL");
 const assignmentLabel = ref("");
 const selectedDate = ref<string | null>(null);
-const rangeStart = ref<string | null>(null);
-const rangeEnd = ref<string | null>(null);
+const batchMonth = ref("2026-04");
+const batchWeekdays = ref<CalendarWeekday[]>([]);
 const viewMode = ref<CalendarViewMode>("MONTH");
 const saving = ref(false);
 const loadingDetails = ref(false);
@@ -68,6 +75,15 @@ const regionOptions = computed(() => [
   { value: "VIETNAM", label: t("calendar.region.vietnam") },
   { value: "SINGAPORE", label: t("calendar.region.singapore") },
   { value: "GLOBAL", label: t("calendar.region.global") },
+]);
+const weekdayOptions = computed<CalendarWeekdayOption[]>(() => [
+  { value: 1, label: t("calendar.weekday.mon") },
+  { value: 2, label: t("calendar.weekday.tue") },
+  { value: 3, label: t("calendar.weekday.wed") },
+  { value: 4, label: t("calendar.weekday.thu") },
+  { value: 5, label: t("calendar.weekday.fri") },
+  { value: 6, label: t("calendar.weekday.sat") },
+  { value: 0, label: t("calendar.weekday.sun") },
 ]);
 
 const editorOptions = computed<CalendarEditorOption[]>(() => [
@@ -190,14 +206,14 @@ async function initializeEditor() {
   selectedDate.value = null;
   assignmentLabel.value = "";
   selectedType.value = "NORMAL";
-  rangeStart.value = null;
-  rangeEnd.value = null;
+  batchWeekdays.value = [];
   viewMode.value = "MONTH";
 
   if (!isEditMode.value) {
     form.value = calendarService.createDraft();
     assignments.value = calendarService.createAssignments();
     focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
+    batchMonth.value = focusMonth.value;
     return;
   }
 
@@ -205,6 +221,7 @@ async function initializeEditor() {
   assignments.value = [];
   focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
   await loadCalendarDates(calendarCode.value);
+  batchMonth.value = focusMonth.value;
 }
 
 function setViewMode(mode: CalendarViewMode) {
@@ -233,26 +250,44 @@ function applyDaySelection(date: string) {
   );
 }
 
-function applyRangeSelection() {
+function toggleBatchWeekday(day: CalendarWeekday) {
+  const nextWeekdays = batchWeekdays.value.includes(day)
+    ? batchWeekdays.value.filter((item) => item !== day)
+    : [...batchWeekdays.value, day];
+
+  batchWeekdays.value = nextWeekdays.sort(
+    (left, right) => weekdaySortOrder.indexOf(left) - weekdaySortOrder.indexOf(right),
+  );
+}
+
+function isBatchWeekdaySelected(day: CalendarWeekday) {
+  return batchWeekdays.value.includes(day);
+}
+
+function applyWeekdaySelection() {
   error.value = "";
   message.value = "";
 
-  if (!rangeStart.value || !rangeEnd.value) {
-    error.value = t("calendar.builder.validation.batchDatesRequired");
+  if (!batchMonth.value) {
+    error.value = t("calendar.builder.validation.batchMonthRequired");
     return;
   }
-  if (rangeStart.value > rangeEnd.value) {
-    error.value = t("calendar.builder.validation.batchDateRangeInvalid");
+  if (batchWeekdays.value.length === 0) {
+    error.value = t("calendar.builder.validation.batchWeekdaysRequired");
     return;
   }
 
-  const dates = getDateKeysInRange(rangeStart.value, rangeEnd.value);
+  const dates = getDateKeysForWeekdaysInMonth(batchMonth.value, batchWeekdays.value);
   const dateSet = new Set(dates);
   const retainedAssignments = assignments.value.filter((item) => !dateSet.has(item.date));
+  focusMonth.value = batchMonth.value;
 
   if (selectedType.value === "CLEAR_DATE") {
     assignments.value = retainedAssignments;
-    message.value = t("calendar.builder.messages.dateRangeApplied", { count: dates.length });
+    message.value = t("calendar.builder.messages.weekdayPatternApplied", {
+      count: dates.length,
+      month: formatMonthLabel(batchMonth.value),
+    });
     return;
   }
 
@@ -261,7 +296,10 @@ function applyRangeSelection() {
     ...dates.map((date) => createAssignment(date, selectedType.value as CalendarDayType, assignmentLabel.value)),
   ].sort((left, right) => left.date.localeCompare(right.date));
   selectedDate.value = dates[dates.length - 1] ?? selectedDate.value;
-  message.value = t("calendar.builder.messages.dateRangeApplied", { count: dates.length });
+  message.value = t("calendar.builder.messages.weekdayPatternApplied", {
+    count: dates.length,
+    month: formatMonthLabel(batchMonth.value),
+  });
 }
 
 async function loadCalendarDates(code: string) {
@@ -593,21 +631,34 @@ function getTodayDateKey() {
                   <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('calendar.builder.hints.batchAssignment') }}</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4">
                   <UiInput
-                    v-model="rangeStart"
-                    :label="t('calendar.builder.fields.batchStartDate')"
-                    type="date"
-                  />
-                  <UiInput
-                    v-model="rangeEnd"
-                    :label="t('calendar.builder.fields.batchEndDate')"
-                    type="date"
+                    v-model="batchMonth"
+                    :label="t('calendar.builder.fields.batchMonth')"
+                    type="month"
                   />
                 </div>
 
-                <UiButton block leading-icon="date_range" @click="applyRangeSelection">
-                  {{ t('calendar.builder.actions.applyDateRange') }}
+                <div class="space-y-2">
+                  <p class="ui-label">{{ t('calendar.builder.fields.batchWeekdays') }}</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="weekday in weekdayOptions"
+                      :key="weekday.value"
+                      type="button"
+                      class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
+                      :class="isBatchWeekdaySelected(weekday.value)
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'"
+                      @click="toggleBatchWeekday(weekday.value)"
+                    >
+                      {{ weekday.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <UiButton block leading-icon="calendar_month" @click="applyWeekdaySelection">
+                  {{ t('calendar.builder.actions.applyWeekdayPattern') }}
                 </UiButton>
               </section>
             </UiCardBody>
@@ -666,8 +717,6 @@ function getTodayDateKey() {
                 :month="visibleMonths[0]"
                 :assignments="assignments"
                 :selected-date="selectedDate"
-                :range-start="rangeStart"
-                :range-end="rangeEnd"
                 interactive
                 @select-day="applyDaySelection"
               />
@@ -679,8 +728,6 @@ function getTodayDateKey() {
                   :month="month"
                   :assignments="assignments"
                   :selected-date="selectedDate"
-                  :range-start="rangeStart"
-                  :range-end="rangeEnd"
                   compact
                   interactive
                   @select-day="applyDaySelection"
@@ -694,8 +741,6 @@ function getTodayDateKey() {
                   :month="month"
                   :assignments="assignments"
                   :selected-date="selectedDate"
-                  :range-start="rangeStart"
-                  :range-end="rangeEnd"
                   compact
                   interactive
                   @select-day="applyDaySelection"

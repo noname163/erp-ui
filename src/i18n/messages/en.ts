@@ -561,6 +561,7 @@ export default {
       },
       actions: {
         applyDateRange: 'Apply Date Range',
+        applyWeekdayPattern: 'Apply Weekday Pattern',
         backToList: 'Back to List',
         saveCalendarTemplate: 'Save Calendar Template',
         saveChanges: 'Save Changes',
@@ -569,7 +570,7 @@ export default {
       editBanner:
         'Viewing calendar {code} in edit layout. Dates are loaded from /api/company-calendars/{code}/dates and saved with PUT /api/company-calendars/{code}.',
       sections: {
-        batchAssignment: 'Batch Assignment',
+        batchAssignment: 'Weekday Assignment',
         configuration: 'Configuration',
         configurationCreateHint: 'Core metadata for the calendar template.',
         configurationEditHint: 'Metadata passed from the calendar list selection.',
@@ -586,6 +587,8 @@ export default {
       fields: {
         batchStartDate: 'Start Date',
         batchEndDate: 'End Date',
+        batchMonth: 'Month',
+        batchWeekdays: 'Weekdays',
         calendarName: 'Calendar Name',
         notes: 'Notes',
         notesPlaceholder: 'Describe the teams or rules covered by this calendar...',
@@ -593,7 +596,7 @@ export default {
         assignmentPlaceholder: 'Optional note for the next clicked date',
       },
       hints: {
-        batchAssignment: 'Apply the selected day type across a full date range in one step.',
+        batchAssignment: 'Apply the selected day type to matching weekdays in the chosen month.',
         clearMode: 'Clear mode does not use labels. Click dates to remove overrides.',
         assignmentLabel: 'Used for holidays, day-offs, and special coverage labels.',
       },
@@ -601,6 +604,8 @@ export default {
         pastEffectiveFrom: 'Effective from date cannot be in the past.',
         batchDatesRequired: 'Start date and end date are required for batch assignment.',
         batchDateRangeInvalid: 'End date must be on or after the start date.',
+        batchMonthRequired: 'Month is required for weekday assignment.',
+        batchWeekdaysRequired: 'Select at least one weekday to apply the assignment.',
         nameRequired: 'Calendar name is required.',
         effectiveDatesRequired: 'Effective dates are required.',
         regionRequired: 'Region is required.',
@@ -614,6 +619,7 @@ export default {
       },
       messages: {
         dateRangeApplied: '{count} dates updated.',
+        weekdayPatternApplied: '{count} dates updated for {month}.',
         unexpectedStatus: 'Calendar saved with status {status}.',
       },
       loadingDates: 'Loading calendar dates...',

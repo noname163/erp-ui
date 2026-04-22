@@ -557,6 +557,7 @@ export default {
       },
       actions: {
         applyDateRange: 'Áp dụng khoảng ngày',
+        applyWeekdayPattern: 'Áp dụng theo thứ',
         backToList: 'Quay lại danh sách',
         saveCalendarTemplate: 'Lưu mẫu lịch',
         saveChanges: 'Lưu thay đổi',
@@ -565,7 +566,7 @@ export default {
       editBanner:
         'Đang xem lịch {code} ở chế độ chỉnh sửa. Ngày được tải từ /api/company-calendars/{code}/dates và lưu bằng PUT /api/company-calendars/{code}.',
       sections: {
-        batchAssignment: 'Gán theo khoảng ngày',
+        batchAssignment: 'Gán theo thứ trong tháng',
         configuration: 'Cấu hình',
         configurationCreateHint: 'Thông tin nền tảng của mẫu lịch.',
         configurationEditHint: 'Thông tin được truyền từ lựa chọn ở danh sách lịch.',
@@ -582,6 +583,8 @@ export default {
       fields: {
         batchStartDate: 'Ngày bắt đầu',
         batchEndDate: 'Ngày kết thúc',
+        batchMonth: 'Tháng',
+        batchWeekdays: 'Thứ',
         calendarName: 'Tên lịch',
         notes: 'Ghi chú',
         notesPlaceholder: 'Mô tả nhóm hoặc quy tắc áp dụng cho lịch này...',
@@ -589,7 +592,7 @@ export default {
         assignmentPlaceholder: 'Ghi chú tùy chọn cho ngày sẽ bấm tiếp theo',
       },
       hints: {
-        batchAssignment: 'Áp dụng loại ngày đã chọn cho toàn bộ khoảng ngày trong một lần.',
+        batchAssignment: 'Áp dụng loại ngày đã chọn cho các thứ tương ứng trong tháng đã chọn.',
         clearMode: 'Chế độ xóa không dùng nhãn. Bấm ngày để xóa ghi đè.',
         assignmentLabel: 'Dùng cho ngày lễ, ngày nghỉ và các nhãn ca đặc biệt.',
       },
@@ -597,6 +600,8 @@ export default {
         pastEffectiveFrom: 'Ngày hiệu lực từ không được ở trong quá khứ.',
         batchDatesRequired: 'Cần nhập ngày bắt đầu và ngày kết thúc để gán theo khoảng.',
         batchDateRangeInvalid: 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.',
+        batchMonthRequired: 'Cần chọn tháng để gán theo thứ.',
+        batchWeekdaysRequired: 'Hãy chọn ít nhất một thứ.',
         nameRequired: 'Tên lịch là bắt buộc.',
         effectiveDatesRequired: 'Ngày hiệu lực là bắt buộc.',
         regionRequired: 'Khu vực là bắt buộc.',
@@ -610,6 +615,7 @@ export default {
       },
       messages: {
         dateRangeApplied: 'Đã cập nhật {count} ngày.',
+        weekdayPatternApplied: 'Đã cập nhật {count} ngày trong {month}.',
         unexpectedStatus: 'Lịch đã được lưu với trạng thái {status}.',
       },
       loadingDates: 'Đang tải ngày của lịch...',

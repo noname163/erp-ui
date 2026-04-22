@@ -11,11 +11,6 @@ import UiSearchSelect, { type UiSearchSelectOption } from '@/components/ui/UiSea
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { dailyWorkService, type DailyWorkUnit, type WorkType } from '@/services/daily-work.service'
-<<<<<<< Updated upstream
-import { AppRoute } from '@/types'
-
-const router = useRouter()
-=======
 import { userProfileService } from '@/services/user-profile.service'
 import { useI18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -25,7 +20,6 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const { t } = useI18n()
->>>>>>> Stashed changes
 
 const loading = ref(false)
 const loadingEmployees = ref(false)
@@ -35,7 +29,10 @@ const message = ref('')
 const isEmployeeRole = computed(() => auth.activeRole === 'EMPLOYEE')
 const currentUserProfileCode = computed(() => auth.user?.userProfileCode?.trim() ?? '')
 const currentUserLabel = computed(() => auth.user?.fullName || auth.user?.email || currentUserProfileCode.value)
-
+const selectedWorkCode = computed(() => {
+    const code = route.query.code
+    return typeof code === 'string' ? code : ''
+})
 const createDefaultForm = () => ({
   userProfileCode: isEmployeeRole.value ? currentUserProfileCode.value : '',
   workingDate: '',
@@ -49,35 +46,6 @@ const createDefaultForm = () => ({
   description: '',
 })
 
-<<<<<<< Updated upstream
-const form = ref(defaultForm())
-
-const employeeOptions = [
-  {
-    value: 'EMP-001',
-    label: 'John Doe',
-    subtitle: 'Senior Software Engineer',
-    avatarUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCWJWqEACDCp7b4ZK1Z8D2DF3NZn1QBd5WlCrOjlj2ziGRcMEVx-F3EgdMtd9oufp0EQ9pfpb_8UHEqgjs27NEx2xSz7J8wuJ0-F87vuyCcpukfsBKF1qJ7rr1aURquQM06RNIqMMYaJnlyr6hsXerFgRKTyBJw-lsrFKR5EpzGyYILr2VuGiQERrP5eqcfffGJIv_OmNzRkCZPoI11xx3Cd5f1EjjqA7mzqlqOr-rRINaL4bUqB_9evxLuHknia9mD9G2xoor7VrVo',
-  },
-  { value: 'EMP-042', label: 'John Smith', subtitle: 'Project Manager' },
-  { value: 'EMP-089', label: 'Johnathan Johnson', subtitle: 'QA Specialist' },
-]
-
-const unitOptions = [
-  { value: 'HOUR', label: 'HOUR' },
-  { value: 'DAY', label: 'DAY' },
-  { value: 'PRODUCT', label: 'PRODUCT' },
-]
-const workTypeOptions = [
-  { value: 'NORMAL', label: 'NORMAL' },
-  { value: 'HOLIDAY_WORK', label: 'HOLIDAY_WORK' },
-  { value: 'WEEKEND_WORK', label: 'WEEKEND_WORK' },
-  { value: 'PTO_PAID', label: 'PTO_PAID' },
-  { value: 'PTO_UNPAID', label: 'PTO_UNPAID' },
-  { value: 'UNPAID_LEAVE', label: 'UNPAID_LEAVE' },
-]
-=======
 const form = ref(createDefaultForm())
 const employeeOptions = ref<UiSearchSelectOption[]>([])
 
@@ -95,7 +63,6 @@ const workTypeOptions = computed(() => [
   { value: 'PTO_UNPAID', label: t('logWork.options.workType.ptoUnpaid') },
   { value: 'UNPAID_LEAVE', label: t('logWork.options.workType.unpaidLeave') },
 ])
->>>>>>> Stashed changes
 
 const canSubmit = computed(() =>
   Boolean(
@@ -110,10 +77,6 @@ const canSubmit = computed(() =>
   ),
 )
 
-<<<<<<< Updated upstream
-function cancel() {
-  form.value = defaultForm()
-=======
 function resolveOptionCollection(res: any) {
   const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
   return Array.isArray(raw) ? raw : []
@@ -191,7 +154,6 @@ function resetForm() {
   if (isEmployeeRole.value) {
     form.value.userProfileCode = currentUserProfileCode.value
   }
->>>>>>> Stashed changes
   error.value = ''
   message.value = ''
 }
@@ -222,18 +184,14 @@ async function submit() {
     loading.value = false
   }
 }
-<<<<<<< Updated upstream
-=======
 
 onMounted(() => {
   if (isEmployeeRole.value && !currentUserProfileCode.value) {
     error.value = t('logWork.errors.currentEmployeeUnavailable')
     return
   }
-
   void loadEmployeeOptions()
 })
->>>>>>> Stashed changes
 </script>
 
 <template>
@@ -266,19 +224,15 @@ onMounted(() => {
 
           <form class="space-y-8" @submit.prevent="submit">
             <UiSearchSelect
+              v-if="!isEmployeeRole"
               v-model="form.userProfileCode"
               :options="employeeOptions"
               :section-title="t('logWork.sections.employeeSelection')"
               sectionIcon="badge"
-<<<<<<< Updated upstream
-              label="Select Employee"
-              placeholder="Search by name or ID..."
-=======
               :label="t('logWork.fields.employee')"
               :placeholder="t('logWork.fields.employeePlaceholder')"
-              :disabled="loadingEmployees || isEmployeeRole"
+              :disabled="loadingEmployees"
               :allow-free-text="false"
->>>>>>> Stashed changes
               required
             />
 

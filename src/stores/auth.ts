@@ -52,7 +52,7 @@ export const useAuthStore = defineStore("auth", {
       const data = await authService.login({ email, password });
       const roles = extractRoles(data);
       this.roles = roles;
-
+    
       // API returns JWT in cookie; response may include profile/roles depending on backend
       this.isAuthenticated = true;
       this.user = extractUser(data);
@@ -60,7 +60,6 @@ export const useAuthStore = defineStore("auth", {
         LS_AUTH,
         JSON.stringify({ isAuthenticated: true, user: this.user, roles }),
       );
-      console.log("Auth data:", { data });
       // auto-pick role (preserve existing role if still valid)
       const existing =
         (localStorage.getItem(LS_ROLE) as RoleCode | null) ?? null;
