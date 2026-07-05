@@ -9,9 +9,10 @@ import UiCardBody from '@/components/ui/UiCardBody.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
+import UiTextarea from '@/components/ui/UiTextarea.vue'
 import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { useI18n } from '@/i18n'
-import { payrollRunService, type PayrollRunStatus } from '@/services/payroll-run.service'
+import { payrollRunService, type PayrollRerunMode, type PayrollRunStatus } from '@/services/payroll-run.service'
 import { AppRoute } from '@/types'
 
 type StatusFilter = 'ALL' | PayrollRunStatus
@@ -33,6 +34,7 @@ const pageSize = 8
 
 const loading = ref(false)
 const runningPayroll = ref(false)
+const rerunningPayroll = ref(false)
 const loadError = ref('')
 const actionMessage = ref('')
 const actionTone = ref<'success' | 'error'>('success')
@@ -56,6 +58,14 @@ const appliedFilters = ref({
 })
 
 const rows = ref<PayrollRunRow[]>([])
+const rerunModalOpen = ref(false)
+const rerunTarget = ref<PayrollRunRow | null>(null)
+const rerunReason = ref('')
+const rerunMode = ref<PayrollRerunMode>('FULL_RUN')
+const rerunEmployeeCodesText = ref('')
+const rerunDryRun = ref(true)
+const rerunResult = ref<any | null>(null)
+const rerunError = ref('')
 
 const headers = computed<UiTableHeader[]>(() => [
   { key: 'status', label: t('payrollRuns.headers.status'), thClass: 'min-w-[150px]' },
@@ -70,8 +80,17 @@ const statusOptions = computed(() => [
   { value: 'ALL', label: t('payrollRuns.statusOptions.all') },
   { value: 'OPEN', label: t('payrollRuns.statusOptions.open') },
   { value: 'CALCULATED', label: t('payrollRuns.statusOptions.calculated') },
+  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'PARTIAL_FAILED', label: 'Partial failed' },
+  { value: 'RERUNNING', label: 'Re-running' },
   { value: 'CLOSED', label: t('payrollRuns.statusOptions.close') },
 ])
+
+const rerunModeOptions = [
+  { value: 'FULL_RUN', label: 'Full run' },
+  { value: 'SELECTED_EMPLOYEES', label: 'Selected employees' },
+  { value: 'FAILED_ONLY', label: 'Failed only' },
+]
 
 const filteredRows = computed(() => {
   const query = appliedFilters.value.search.trim().toLowerCase()
@@ -129,6 +148,10 @@ const completedRuns = computed(() => filteredRows.value.filter((row) => row.stat
 const failedRuns = computed(() => filteredRows.value.filter((row) => row.status === 'FAILED').length)
 const selectedRunDate = computed(() => toRunDateValue(selectedRunMonthYear.value))
 const canRunPayroll = computed(() => !loading.value && !runningPayroll.value && Boolean(selectedRunDate.value))
+const rerunEmployeeCodes = computed(() => rerunEmployeeCodesText.value
+  .split(/[\s,]+/)
+  .map((value) => value.trim())
+  .filter(Boolean))
 
 watch(filteredRows, () => {
   if (page.value > totalPages.value) {
@@ -230,21 +253,75 @@ function viewPayrollRunDetails(row: PayrollRunRow) {
   })
 }
 
+function openRerunModal(row: PayrollRunRow) {
+  rerunTarget.value = row
+  rerunReason.value = ''
+  rerunMode.value = 'FULL_RUN'
+  rerunEmployeeCodesText.value = ''
+  rerunDryRun.value = true
+  rerunResult.value = null
+  rerunError.value = ''
+  rerunModalOpen.value = true
+}
+
+function closeRerunModal() {
+  if (rerunningPayroll.value) return
+  rerunModalOpen.value = false
+}
+
+async function submitRerun() {
+  if (!rerunTarget.value) return
+  if (!rerunReason.value.trim()) {
+    rerunError.value = 'Reason is required'
+    return
+  }
+  if (rerunMode.value === 'SELECTED_EMPLOYEES' && rerunEmployeeCodes.value.length === 0) {
+    rerunError.value = 'Enter at least one employee code'
+    return
+  }
+
+  rerunningPayroll.value = true
+  rerunError.value = ''
+  rerunResult.value = null
+  try {
+    const response = await payrollRunService.rerun(rerunTarget.value.code || rerunTarget.value.id, {
+      reason: rerunReason.value.trim(),
+      mode: rerunMode.value,
+      employeeCodes: rerunMode.value === 'SELECTED_EMPLOYEES' ? rerunEmployeeCodes.value : undefined,
+      dryRun: rerunDryRun.value,
+    })
+    rerunResult.value = response
+    actionTone.value = 'success'
+    actionMessage.value = rerunDryRun.value ? 'Payroll re-run preview calculated' : 'Payroll re-run completed'
+    if (!rerunDryRun.value) {
+      await loadPayrollRuns()
+    }
+  } catch (error: any) {
+    rerunError.value = error?.response?.data?.message ?? 'Payroll re-run failed'
+  } finally {
+    rerunningPayroll.value = false
+  }
+}
+
 function statusVariant(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'CLOSED') return 'success' as const
-  if (currentStatus === 'FAILED') return 'error' as const
+  if (currentStatus === 'CLOSED' || currentStatus === 'COMPLETED') return 'success' as const
+  if (currentStatus === 'FAILED' || currentStatus === 'PARTIAL_FAILED') return 'error' as const
   return 'info' as const
 }
 
 function statusIcon(currentStatus: PayrollRunStatus) {
-  if (currentStatus === 'CLOSED') return 'check_circle'
-  if (currentStatus === 'FAILED') return 'error'
+  if (currentStatus === 'CLOSED' || currentStatus === 'COMPLETED') return 'check_circle'
+  if (currentStatus === 'FAILED' || currentStatus === 'PARTIAL_FAILED') return 'error'
   return 'autorenew'
 }
 
 function statusLabel(currentStatus: PayrollRunStatus) {
   if (currentStatus === 'OPEN') return t('payrollRuns.statusLabels.running')
   if (currentStatus === 'CALCULATED') return t('payrollRuns.statusLabels.calculated')
+  if (currentStatus === 'COMPLETED') return 'Completed'
+  if (currentStatus === 'PARTIAL_FAILED') return 'Partial failed'
+  if (currentStatus === 'RERUNNING') return 'Re-running'
+  if (currentStatus === 'PROCESSING') return 'Processing'
   if (currentStatus === 'FAILED') return t('payrollRuns.statusLabels.failed')
   return t('payrollRuns.statusLabels.open')
 }
@@ -340,6 +417,10 @@ function normalizeStatus(value: unknown): PayrollRunStatus {
     .replaceAll(' ', '_')
 
   if (token.includes('CALCULATED')) return 'CALCULATED'
+  if (token.includes('PARTIAL_FAILED')) return 'PARTIAL_FAILED'
+  if (token.includes('RERUNNING')) return 'RERUNNING'
+  if (token.includes('PROCESSING')) return 'PROCESSING'
+  if (token.includes('COMPLETED')) return 'COMPLETED'
   if (token.includes('OPEN') || token.includes('DONE') || token.includes('SUCCESS')) return 'OPEN'
   if (token.includes('FAIL') || token.includes('ERROR')) return 'FAILED'
   return 'OPEN'
@@ -730,6 +811,16 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
                   <UiIcon name="visibility" size="18" />
                   <span>{{ t('payrollRuns.actions.viewDetail') }}</span>
                 </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-lg border border-primary/15 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Re-run payroll"
+                  :disabled="loading || runningPayroll || row.status === 'CLOSED' || row.status === 'PROCESSING' || row.status === 'RERUNNING'"
+                  @click="openRerunModal(row)"
+                >
+                  <UiIcon name="restart_alt" size="18" />
+                  <span>Re-run</span>
+                </button>
               </div>
             </template>
 
@@ -777,6 +868,125 @@ function isWithinDateRange(value: string | null, from: string, to: string) {
           </div>
         </div>
       </UiCard>
+
+      <div
+        v-if="rerunModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
+      >
+        <div class="w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-slate-950">
+          <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 dark:text-white">Re-run payroll</h2>
+              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ rerunTarget?.code || rerunTarget?.id }}</p>
+            </div>
+            <button
+              type="button"
+              class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-white"
+              :disabled="rerunningPayroll"
+              @click="closeRerunModal"
+            >
+              <UiIcon name="close" size="20" />
+            </button>
+          </div>
+
+          <div class="max-h-[75vh] space-y-4 overflow-y-auto px-5 py-4">
+            <div
+              v-if="rerunError"
+              class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+            >
+              {{ rerunError }}
+            </div>
+
+            <UiTextarea
+              v-model="rerunReason"
+              label="Reason"
+              required
+              :rows="3"
+              placeholder="Timesheet data was updated"
+              :disabled="rerunningPayroll"
+            />
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <UiSelect
+                v-model="rerunMode"
+                label="Mode"
+                :options="rerunModeOptions"
+                :disabled="rerunningPayroll"
+              />
+              <label class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                <input
+                  v-model="rerunDryRun"
+                  type="checkbox"
+                  class="size-4 rounded border-slate-300 text-primary focus:ring-primary"
+                  :disabled="rerunningPayroll"
+                />
+                Dry-run preview
+              </label>
+            </div>
+
+            <UiTextarea
+              v-if="rerunMode === 'SELECTED_EMPLOYEES'"
+              v-model="rerunEmployeeCodesText"
+              label="Employee codes"
+              :rows="2"
+              placeholder="EMP001, EMP002"
+              :disabled="rerunningPayroll"
+            />
+
+            <div
+              v-if="rerunResult"
+              class="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60"
+            >
+              <div class="grid gap-3 text-sm sm:grid-cols-4">
+                <div>
+                  <p class="text-xs font-bold uppercase text-slate-500">Status</p>
+                  <p class="mt-1 font-semibold text-slate-900 dark:text-white">{{ rerunResult.status }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-bold uppercase text-slate-500">Total</p>
+                  <p class="mt-1 font-semibold text-slate-900 dark:text-white">{{ rerunResult.totalEmployees }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-bold uppercase text-slate-500">Success</p>
+                  <p class="mt-1 font-semibold text-emerald-700">{{ rerunResult.successCount }}</p>
+                </div>
+                <div>
+                  <p class="text-xs font-bold uppercase text-slate-500">Failed</p>
+                  <p class="mt-1 font-semibold text-rose-700">{{ rerunResult.failedCount }}</p>
+                </div>
+              </div>
+
+              <div v-if="rerunResult.results?.length" class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                  <thead class="text-xs uppercase text-slate-500">
+                    <tr>
+                      <th class="py-2 pr-4">Employee</th>
+                      <th class="py-2 pr-4">Old actual</th>
+                      <th class="py-2 pr-4">New actual</th>
+                      <th class="py-2 pr-4">Difference</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tr v-for="item in rerunResult.results" :key="item.employeeCode">
+                      <td class="py-2 pr-4 font-semibold">{{ item.employeeCode }}</td>
+                      <td class="py-2 pr-4">{{ item.oldActualAmount }}</td>
+                      <td class="py-2 pr-4">{{ item.newActualAmount }}</td>
+                      <td class="py-2 pr-4">{{ item.differenceAmount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end dark:border-slate-800">
+            <UiButton variant="outline" :disabled="rerunningPayroll" @click="closeRerunModal">Close</UiButton>
+            <UiButton leading-icon="restart_alt" :disabled="rerunningPayroll" @click="submitRerun">
+              {{ rerunningPayroll ? 'Running...' : (rerunDryRun ? 'Preview' : 'Re-run payroll') }}
+            </UiButton>
+          </div>
+        </div>
+      </div>
     </div>
   </AppLayout>
 </template>
