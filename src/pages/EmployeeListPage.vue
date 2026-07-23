@@ -49,6 +49,7 @@ const filters = ref({
   status: 'ALL',
 })
 
+const seedRows: EmployeeRow[] = []
 const headers: UiTableHeader[] = [
   { key: 'id', label: 'ID' },
   { key: 'code', label: 'Code' },
