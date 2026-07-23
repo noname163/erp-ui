@@ -36,6 +36,7 @@ export interface UserProfile {
   fullName?: string;
   role?: RoleCode;
   roles?: RoleCode[];
+  userProfileCode?: string;
 }
 
 export interface Company {

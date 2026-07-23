@@ -7,6 +7,7 @@ export type CalendarDayType =
   | "HOLIDAY"
   | "WEEKEND_WORK"
   | "COMPANY_DAY_OFF";
+export type CalendarWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type CalendarViewMode = "MONTH" | "QUARTER" | "YEAR";
 
 export interface CalendarOwner {
@@ -314,6 +315,32 @@ export function getMonthDateKeys(month: string) {
 
   return Array.from({ length: daysInMonth }, (_, index) =>
     toDateKey(new Date(year, monthIndex, index + 1)),
+  );
+}
+
+export function getDateKeysInRange(startDate: string, endDate: string) {
+  const start = parseDateKey(startDate);
+  const end = parseDateKey(endDate);
+  const from = start <= end ? start : end;
+  const to = start <= end ? end : start;
+  const dates: string[] = [];
+
+  const cursor = new Date(from);
+  while (cursor <= to) {
+    dates.push(toDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}
+
+export function getDateKeysForWeekdaysInMonth(
+  month: string,
+  weekdays: CalendarWeekday[],
+) {
+  const weekdaySet = new Set<CalendarWeekday>(weekdays);
+  return getMonthDateKeys(month).filter((date) =>
+    weekdaySet.has(parseDateKey(date).getDay() as CalendarWeekday),
   );
 }
 

@@ -21,6 +21,7 @@ import {
   defaultCalendarDateNote,
   formatDisplayDate,
   formatMonthLabel,
+  getDateKeysForWeekdaysInMonth,
   getMonthDateKeys,
   getMonthsForView,
   summarizeMonths,
@@ -28,6 +29,7 @@ import {
 import type {
   CalendarAssignment,
   CalendarDayType,
+  CalendarWeekday,
   CalendarViewMode,
   CompanyCalendarDateResponse,
   CompanyCalendarRequest,
@@ -43,6 +45,12 @@ type CalendarEditorOption = {
   icon: string;
   dotClass: string;
 };
+type CalendarWeekdayOption = {
+  value: CalendarWeekday;
+  label: string;
+};
+
+const weekdaySortOrder: CalendarWeekday[] = [1, 2, 3, 4, 5, 6, 0];
 
 const router = useRouter();
 const route = useRoute();
@@ -54,6 +62,8 @@ const focusMonth = ref("2026-04");
 const selectedType = ref<CalendarEditorSelection>("NORMAL");
 const assignmentLabel = ref("");
 const selectedDate = ref<string | null>(null);
+const batchMonth = ref("2026-04");
+const batchWeekdays = ref<CalendarWeekday[]>([]);
 const viewMode = ref<CalendarViewMode>("MONTH");
 const saving = ref(false);
 const loadingDetails = ref(false);
@@ -65,6 +75,15 @@ const regionOptions = computed(() => [
   { value: "VIETNAM", label: t("calendar.region.vietnam") },
   { value: "SINGAPORE", label: t("calendar.region.singapore") },
   { value: "GLOBAL", label: t("calendar.region.global") },
+]);
+const weekdayOptions = computed<CalendarWeekdayOption[]>(() => [
+  { value: 1, label: t("calendar.weekday.mon") },
+  { value: 2, label: t("calendar.weekday.tue") },
+  { value: 3, label: t("calendar.weekday.wed") },
+  { value: 4, label: t("calendar.weekday.thu") },
+  { value: 5, label: t("calendar.weekday.fri") },
+  { value: 6, label: t("calendar.weekday.sat") },
+  { value: 0, label: t("calendar.weekday.sun") },
 ]);
 
 const editorOptions = computed<CalendarEditorOption[]>(() => [
@@ -170,7 +189,7 @@ const compiledCalendarRequest = computed<CompanyCalendarRequest>(() => ({
       dayType: item.type,
       note: item.label?.trim() || defaultCalendarDateNote(item.type),
     }))
-    .sort((a, b) => a.calDate.localeCompare(b.calDate)),
+    .sort((left, right) => left.calDate.localeCompare(right.calDate)),
 }));
 
 watch(
@@ -187,12 +206,14 @@ async function initializeEditor() {
   selectedDate.value = null;
   assignmentLabel.value = "";
   selectedType.value = "NORMAL";
+  batchWeekdays.value = [];
   viewMode.value = "MONTH";
 
   if (!isEditMode.value) {
     form.value = calendarService.createDraft();
     assignments.value = calendarService.createAssignments();
     focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
+    batchMonth.value = focusMonth.value;
     return;
   }
 
@@ -200,6 +221,7 @@ async function initializeEditor() {
   assignments.value = [];
   focusMonth.value = resolveFocusMonth(form.value.effectiveFrom, "2026-04");
   await loadCalendarDates(calendarCode.value);
+  batchMonth.value = focusMonth.value;
 }
 
 function setViewMode(mode: CalendarViewMode) {
@@ -213,6 +235,8 @@ function moveRange(direction: -1 | 1) {
 
 function applyDaySelection(date: string) {
   selectedDate.value = date;
+  error.value = "";
+  message.value = "";
   const nextType = selectedType.value;
 
   if (nextType === "CLEAR_DATE") {
@@ -221,10 +245,61 @@ function applyDaySelection(date: string) {
   }
 
   assignments.value = assignments.value.filter((item) => item.date !== date);
-
-  assignments.value = [...assignments.value, createAssignment(date, nextType, assignmentLabel.value)].sort((a, b) =>
-    a.date.localeCompare(b.date),
+  assignments.value = [...assignments.value, createAssignment(date, nextType, assignmentLabel.value)].sort((left, right) =>
+    left.date.localeCompare(right.date),
   );
+}
+
+function toggleBatchWeekday(day: CalendarWeekday) {
+  const nextWeekdays = batchWeekdays.value.includes(day)
+    ? batchWeekdays.value.filter((item) => item !== day)
+    : [...batchWeekdays.value, day];
+
+  batchWeekdays.value = nextWeekdays.sort(
+    (left, right) => weekdaySortOrder.indexOf(left) - weekdaySortOrder.indexOf(right),
+  );
+}
+
+function isBatchWeekdaySelected(day: CalendarWeekday) {
+  return batchWeekdays.value.includes(day);
+}
+
+function applyWeekdaySelection() {
+  error.value = "";
+  message.value = "";
+
+  if (!batchMonth.value) {
+    error.value = t("calendar.builder.validation.batchMonthRequired");
+    return;
+  }
+  if (batchWeekdays.value.length === 0) {
+    error.value = t("calendar.builder.validation.batchWeekdaysRequired");
+    return;
+  }
+
+  const dates = getDateKeysForWeekdaysInMonth(batchMonth.value, batchWeekdays.value);
+  const dateSet = new Set(dates);
+  const retainedAssignments = assignments.value.filter((item) => !dateSet.has(item.date));
+  focusMonth.value = batchMonth.value;
+
+  if (selectedType.value === "CLEAR_DATE") {
+    assignments.value = retainedAssignments;
+    message.value = t("calendar.builder.messages.weekdayPatternApplied", {
+      count: dates.length,
+      month: formatMonthLabel(batchMonth.value),
+    });
+    return;
+  }
+
+  assignments.value = [
+    ...retainedAssignments,
+    ...dates.map((date) => createAssignment(date, selectedType.value as CalendarDayType, assignmentLabel.value)),
+  ].sort((left, right) => left.date.localeCompare(right.date));
+  selectedDate.value = dates[dates.length - 1] ?? selectedDate.value;
+  message.value = t("calendar.builder.messages.weekdayPatternApplied", {
+    count: dates.length,
+    month: formatMonthLabel(batchMonth.value),
+  });
 }
 
 async function loadCalendarDates(code: string) {
@@ -238,7 +313,7 @@ async function loadCalendarDates(code: string) {
     assignments.value = items
       .map(normalizeAssignment)
       .filter((item): item is CalendarAssignment => item !== null)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((left, right) => left.date.localeCompare(right.date));
 
     if (assignments.value.length > 0) {
       focusMonth.value = assignments.value[0].date.slice(0, 7);
@@ -261,6 +336,10 @@ async function saveCalendar() {
   }
   if (!compiledCalendarRequest.value.effectiveFrom || !compiledCalendarRequest.value.effectiveTo) {
     error.value = t("calendar.builder.validation.effectiveDatesRequired");
+    return;
+  }
+  if (compiledCalendarRequest.value.effectiveFrom < getTodayDateKey()) {
+    error.value = t("calendar.builder.validation.pastEffectiveFrom");
     return;
   }
   if (!compiledCalendarRequest.value.region) {
@@ -433,6 +512,14 @@ function asRecord(value: unknown) {
 
   return null;
 }
+
+function getTodayDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 </script>
 
 <template>
@@ -537,6 +624,43 @@ function asRecord(value: unknown) {
                     : t('calendar.builder.hints.assignmentLabel')
                 "
               />
+
+              <section class="space-y-4 border-t border-primary/10 pt-5">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ t('calendar.builder.sections.batchAssignment') }}</h3>
+                  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ t('calendar.builder.hints.batchAssignment') }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                  <UiInput
+                    v-model="batchMonth"
+                    :label="t('calendar.builder.fields.batchMonth')"
+                    type="month"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <p class="ui-label">{{ t('calendar.builder.fields.batchWeekdays') }}</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="weekday in weekdayOptions"
+                      :key="weekday.value"
+                      type="button"
+                      class="rounded-xl border px-3 py-2 text-sm font-semibold transition-colors"
+                      :class="isBatchWeekdaySelected(weekday.value)
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'"
+                      @click="toggleBatchWeekday(weekday.value)"
+                    >
+                      {{ weekday.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <UiButton block leading-icon="calendar_month" @click="applyWeekdaySelection">
+                  {{ t('calendar.builder.actions.applyWeekdayPattern') }}
+                </UiButton>
+              </section>
             </UiCardBody>
           </UiCard>
 

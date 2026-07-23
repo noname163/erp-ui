@@ -232,6 +232,9 @@ router.beforeEach((to) => {
     auth.logout();
     return AppRoute.LOGIN;
   }
+  if (to.path === AppRoute.SALARY_SLIP && activeRole === "EMPLOYEE") {
+    return AppRoute.SALARY_SLIP_LIST;
+  }
 
   return true;
 });
