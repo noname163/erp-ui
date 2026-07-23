@@ -48,6 +48,12 @@ export const appNavItems: AppNavItem[] = [
   {
     labelKey: 'navigation.policyManagement',
     icon: 'gavel',
+    to: AppRoute.PAYROLL_POLICIES,
+    roles: ['HUMAN_RESOURCES'],
+  },
+  {
+    labelKey: 'navigation.salaryTemplate',
+    icon: 'article',
     to: AppRoute.PAYROLL_TEMPLATES,
     roles: ['HUMAN_RESOURCES'],
   },

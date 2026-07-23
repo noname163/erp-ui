@@ -118,7 +118,7 @@ const conflictState = computed<ConflictState>(() => {
 
     const from = form.value.effectiveFrom
     const to = form.value.effectiveTo || form.value.effectiveFrom
-    const overlapsQ3 = from <= '2026-09-30' && to >= '2026-07-01'
+    const overlapsQ3 = from <= '2026-09-30' && to >= '2030-07-01'
 
     if (overlapsQ3) {
         return {

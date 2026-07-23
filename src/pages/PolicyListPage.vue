@@ -549,7 +549,7 @@ function lifecycleLabel(tab: string) {
                             <div class="flex items-center justify-end gap-2">
                                 <UiButton variant="outline" icon-only leading-icon="visibility" />
                                 <UiButton variant="outline" icon-only leading-icon="edit"
-                                    @click="router.push(AppRoute.PAYROLL_BUILDER)" />
+                                    @click="router.push(AppRoute.PAYROLL_POLICY_BUILDER)" />
                                 <UiButton variant="outline" icon-only leading-icon="group_add"
                                     @click="openAssignmentModal(row)" />
                             </div>

@@ -1,6 +1,24 @@
 import { http } from "./http";
 
-export type PayrollRunStatus = "OPEN" | "CALCULATED" | "CLOSED" | "FAILED";
+export type PayrollRunStatus =
+  | "OPEN"
+  | "DRAFT"
+  | "PROCESSING"
+  | "CALCULATED"
+  | "COMPLETED"
+  | "PARTIAL_FAILED"
+  | "CLOSED"
+  | "FAILED"
+  | "RERUNNING";
+
+export type PayrollRerunMode = "FULL_RUN" | "SELECTED_EMPLOYEES" | "FAILED_ONLY";
+
+export type PayrollRerunRequest = {
+  reason: string;
+  employeeCodes?: string[];
+  mode: PayrollRerunMode;
+  dryRun: boolean;
+};
 
 export type PayrollRunListQuery = {
   page?: number;
@@ -24,5 +42,10 @@ export const payrollRunService = {
       status: response.status,
       data: response.data,
     };
+  },
+
+  async rerun(payrollRunCode: string, payload: PayrollRerunRequest) {
+    const { data } = await http.post(`/api/payroll-runs/${payrollRunCode}/rerun`, payload);
+    return data;
   },
 };

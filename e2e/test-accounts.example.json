@@ -1,0 +1,29 @@
+{
+  "roles": {
+    "SYSTEM_ADMIN": {
+      "email": "admin@gmail.com",
+      "password": "D@t163163"
+    },
+    "ADMIN": {
+      "email": "",
+      "password": ""
+    },
+    "COMPANY_MANAGER": {
+      "email": "danghuudat163@gmail.com",
+      "password": "D@t163163"
+    },
+    "HUMAN_RESOURCES": {
+      "email": "danghuudat163+hr@gmail.com",
+      "password": "D@t163163"
+    },
+    "EMPLOYEE": {
+      "email": "danghuudat163+IT@gmail.com",
+      "password": "D@t163163"
+    }
+  },
+  "data": {
+    "payrollRunCode": "PRN-000013",
+    "payrollRunMonth": "2026-08",
+    "dailyWorkEmployeeCode": "USR-QA-AUG-TPL-8H"
+  }
+}

@@ -154,6 +154,7 @@ export default {
     authentication: 'Xác thực',
     workingLogs: 'Nhật ký công việc',
     bulkLogWork: 'Ghi công hàng loạt',
+    salaryTemplate: 'Mẫu lương',
   },
   login: {
     brand: 'Quản trị ERP',
@@ -280,8 +281,25 @@ export default {
       results: '{count} kết quả',
       loading: 'Đang tải nhân viên...',
       emptyTitle: 'Không tìm thấy nhân viên.',
-      loadFailed: 'Không thể tải nhân viên từ API. Đang hiển thị dữ liệu mẫu.',
+      loadFailed: 'Không thể tải danh sách nhân viên từ API.',
       showing: 'Hiển thị {start} đến {end} trên tổng {total} nhân viên',
+      emptyDescription: 'Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc, hoặc thêm hồ sơ nhân viên mới.',
+      actions: {
+        showFilters: 'Hiện bộ lọc',
+        hideFilters: 'Ẩn bộ lọc',
+      },
+      filters: {
+        name: 'Tên nhân viên',
+        namePlaceholder: 'Lọc theo tên nhân viên',
+        department: 'Phòng ban',
+        status: 'Trạng thái',
+        skill: 'Kỹ năng',
+        skillPlaceholder: 'Lọc theo kỹ năng',
+        minAge: 'Tuổi tối thiểu',
+        maxAge: 'Tuổi tối đa',
+        allDepartments: 'Tất cả phòng ban',
+        allStatuses: 'Tất cả trạng thái',
+      },
     },
     create: {
       breadcrumb: 'Nhân viên',
@@ -382,6 +400,7 @@ export default {
     errors: {
       loadEmployees: 'Tải danh sách nhân viên thất bại',
       createFailed: 'Tạo bản ghi công thất bại',
+      currentEmployeeUnavailable: 'Không thể xác định hồ sơ nhân viên hiện tại cho tài khoản này.',
     },
   },
   logWorkList: {
@@ -400,6 +419,8 @@ export default {
       isPto: 'Là PTO',
     },
     actions: {
+      showFilters: 'Hiện bộ lọc',
+      hideFilters: 'Ẩn bộ lọc',
       moreFilters: 'Thêm bộ lọc',
       addLog: 'Thêm bản ghi',
       exportLogs: 'Xuất bản ghi',
@@ -535,6 +556,8 @@ export default {
         newCalendar: 'Lịch mới',
       },
       actions: {
+        applyDateRange: 'Áp dụng khoảng ngày',
+        applyWeekdayPattern: 'Áp dụng theo thứ',
         backToList: 'Quay lại danh sách',
         saveCalendarTemplate: 'Lưu mẫu lịch',
         saveChanges: 'Lưu thay đổi',
@@ -543,6 +566,7 @@ export default {
       editBanner:
         'Đang xem lịch {code} ở chế độ chỉnh sửa. Ngày được tải từ /api/company-calendars/{code}/dates và lưu bằng PUT /api/company-calendars/{code}.',
       sections: {
+        batchAssignment: 'Gán theo thứ trong tháng',
         configuration: 'Cấu hình',
         configurationCreateHint: 'Thông tin nền tảng của mẫu lịch.',
         configurationEditHint: 'Thông tin được truyền từ lựa chọn ở danh sách lịch.',
@@ -557,6 +581,10 @@ export default {
           'Lịch vận hành khu vực cho kho, hỗ trợ và tài chính. Dùng gán ngày để đánh dấu ngày lễ, ngày nghỉ và hỗ trợ cuối tuần.',
       },
       fields: {
+        batchStartDate: 'Ngày bắt đầu',
+        batchEndDate: 'Ngày kết thúc',
+        batchMonth: 'Tháng',
+        batchWeekdays: 'Thứ',
         calendarName: 'Tên lịch',
         notes: 'Ghi chú',
         notesPlaceholder: 'Mô tả nhóm hoặc quy tắc áp dụng cho lịch này...',
@@ -564,10 +592,16 @@ export default {
         assignmentPlaceholder: 'Ghi chú tùy chọn cho ngày sẽ bấm tiếp theo',
       },
       hints: {
+        batchAssignment: 'Áp dụng loại ngày đã chọn cho các thứ tương ứng trong tháng đã chọn.',
         clearMode: 'Chế độ xóa không dùng nhãn. Bấm ngày để xóa ghi đè.',
         assignmentLabel: 'Dùng cho ngày lễ, ngày nghỉ và các nhãn ca đặc biệt.',
       },
       validation: {
+        pastEffectiveFrom: 'Ngày hiệu lực từ không được ở trong quá khứ.',
+        batchDatesRequired: 'Cần nhập ngày bắt đầu và ngày kết thúc để gán theo khoảng.',
+        batchDateRangeInvalid: 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.',
+        batchMonthRequired: 'Cần chọn tháng để gán theo thứ.',
+        batchWeekdaysRequired: 'Hãy chọn ít nhất một thứ.',
         nameRequired: 'Tên lịch là bắt buộc.',
         effectiveDatesRequired: 'Ngày hiệu lực là bắt buộc.',
         regionRequired: 'Khu vực là bắt buộc.',
@@ -580,6 +614,8 @@ export default {
         createFailed: 'Tạo lịch công ty thất bại',
       },
       messages: {
+        dateRangeApplied: 'Đã cập nhật {count} ngày.',
+        weekdayPatternApplied: 'Đã cập nhật {count} ngày trong {month}.',
         unexpectedStatus: 'Lịch đã được lưu với trạng thái {status}.',
       },
       loadingDates: 'Đang tải ngày của lịch...',
@@ -1030,6 +1066,8 @@ export default {
         max: 'Tối đa',
       },
       actions: {
+        showFilters: 'Hiện bộ lọc',
+        hideFilters: 'Ẩn bộ lọc',
         addSalary: 'Thêm lương',
         applyFilters: 'Áp dụng bộ lọc',
       },
