@@ -154,6 +154,7 @@ export default {
     authentication: '身分驗證',
     workingLogs: '工時記錄',
     bulkLogWork: '批次登記工時',
+    salaryTemplate: '薪資樣板',
   },
   login: {
     brand: 'ERP 管理後台',
@@ -279,8 +280,25 @@ export default {
       results: '{count} 筆結果',
       loading: '載入員工中...',
       emptyTitle: '找不到員工。',
-      loadFailed: '無法從 API 載入員工，目前改顯示範例資料。',
+      loadFailed: '無法從 API 載入員工資料。',
       showing: '顯示第 {start} 到 {end} 筆，共 {total} 位員工',
+      emptyDescription: '請調整搜尋條件或篩選器，或新增員工資料。',
+      actions: {
+        showFilters: '顯示篩選',
+        hideFilters: '隱藏篩選',
+      },
+      filters: {
+        name: '員工姓名',
+        namePlaceholder: '依員工姓名篩選',
+        department: '部門',
+        status: '狀態',
+        skill: '技能',
+        skillPlaceholder: '依技能篩選',
+        minAge: '最低年齡',
+        maxAge: '最高年齡',
+        allDepartments: '全部部門',
+        allStatuses: '全部狀態',
+      },
     },
     create: {
       breadcrumb: '員工',
@@ -381,6 +399,7 @@ export default {
     errors: {
       loadEmployees: '載入員工失敗',
       createFailed: '建立工時記錄失敗',
+      currentEmployeeUnavailable: '此帳號無法取得目前員工資料。',
     },
   },
   logWorkList: {
@@ -399,6 +418,8 @@ export default {
       isPto: '是否 PTO',
     },
     actions: {
+      showFilters: '顯示篩選',
+      hideFilters: '隱藏篩選',
       moreFilters: '更多篩選',
       addLog: '新增記錄',
       exportLogs: '匯出記錄',
@@ -534,6 +555,8 @@ export default {
         newCalendar: '新行事曆',
       },
       actions: {
+        applyDateRange: '套用日期區間',
+        applyWeekdayPattern: '套用星期規則',
         backToList: '返回列表',
         saveCalendarTemplate: '儲存行事曆範本',
         saveChanges: '儲存變更',
@@ -542,6 +565,7 @@ export default {
       editBanner:
         '目前以編輯模式檢視行事曆 {code}。日期資料由 /api/company-calendars/{code}/dates 載入，並以 PUT /api/company-calendars/{code} 儲存。',
       sections: {
+        batchAssignment: '星期批次指派',
         configuration: '設定',
         configurationCreateHint: '行事曆範本的核心資訊。',
         configurationEditHint: '由行事曆列表選取時帶入的中繼資料。',
@@ -556,6 +580,10 @@ export default {
           '適用於倉儲、支援與財務團隊的區域營運行事曆。可使用日期指派標記假日、停班與週末支援。',
       },
       fields: {
+        batchStartDate: '開始日期',
+        batchEndDate: '結束日期',
+        batchMonth: '月份',
+        batchWeekdays: '星期',
         calendarName: '行事曆名稱',
         notes: '備註',
         notesPlaceholder: '說明此行事曆涵蓋的團隊或規則...',
@@ -563,10 +591,16 @@ export default {
         assignmentPlaceholder: '下一個點選日期的選填備註',
       },
       hints: {
+        batchAssignment: '一次將所選日期類型套用到所選月份中的指定星期。',
         clearMode: '清除模式不使用標籤。點選日期可移除明確覆寫。',
         assignmentLabel: '可用於假日、停班日與特殊支援班別標籤。',
       },
       validation: {
+        pastEffectiveFrom: '生效起日不可早於今天。',
+        batchDatesRequired: '批次指派需要開始日期與結束日期。',
+        batchDateRangeInvalid: '結束日期必須等於或晚於開始日期。',
+        batchMonthRequired: '星期指派需要選擇月份。',
+        batchWeekdaysRequired: '請至少選擇一個星期。',
         nameRequired: '行事曆名稱為必填。',
         effectiveDatesRequired: '生效日期為必填。',
         regionRequired: '區域為必填。',
@@ -579,6 +613,8 @@ export default {
         createFailed: '建立公司行事曆失敗',
       },
       messages: {
+        dateRangeApplied: '已更新 {count} 個日期。',
+        weekdayPatternApplied: '已更新 {month} 的 {count} 個日期。',
         unexpectedStatus: '行事曆已儲存，狀態為 {status}。',
       },
       loadingDates: '載入行事曆日期中...',
@@ -1029,6 +1065,8 @@ export default {
         max: '最大值',
       },
       actions: {
+        showFilters: '顯示篩選',
+        hideFilters: '隱藏篩選',
         addSalary: '新增薪資',
         applyFilters: '套用篩選',
       },

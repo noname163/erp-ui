@@ -13,6 +13,7 @@ import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import { dailyWorkService, type EmployeeDailyWorkListResponse } from '@/services/daily-work.service'
 import { userProfileService } from '@/services/user-profile.service'
 import { useI18n } from '@/i18n'
+import { useAuthStore } from '@/stores/auth'
 import { AppRoute } from '@/types'
 
 type SelectOption = { value: string; label: string }
@@ -35,6 +36,7 @@ type LogWorkRow = {
 }
 
 const router = useRouter()
+const auth = useAuthStore()
 const { t } = useI18n()
 
 const loading = ref(false)
@@ -44,6 +46,7 @@ const currentPage = ref(1)
 const pageSize = 8
 const totalElements = ref(0)
 const totalPages = ref(1)
+const isFilterOpen = ref(false)
 
 function defaultEmployeeOption(): SelectOption {
   return { value: '', label: t('logWorkList.filters.allEmployees') }
@@ -64,6 +67,10 @@ const applied = ref({
   usedPto: false,
 })
 
+const isEmployeeRole = computed(() => auth.activeRole === 'EMPLOYEE')
+const currentUserProfileCode = computed(() => auth.user?.userProfileCode?.trim() ?? '')
+const currentUserLabel = computed(() => auth.user?.fullName || auth.user?.email || currentUserProfileCode.value)
+
 const headers = computed<UiTableHeader[]>(() => [
   { key: 'employee', label: t('common.field.employee'), thClass: 'min-w-[240px]' },
   { key: 'logDay', label: t('logWorkList.headers.logDay'), thClass: 'min-w-[140px]' },
@@ -75,13 +82,11 @@ const headers = computed<UiTableHeader[]>(() => [
   { key: 'actions', label: '', align: 'right', thClass: 'w-16' },
 ])
 
-const seedRows: LogWorkRow[] = []
-
 function toNumber(value: unknown) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
   if (typeof value === 'string') {
-    const parsed = Number(value.trim())
-    return Number.isFinite(parsed) ? parsed : 0
+    const parsedValue = Number(value.trim())
+    return Number.isFinite(parsedValue) ? parsedValue : 0
   }
   return 0
 }
@@ -96,9 +101,12 @@ function initials(name: string) {
     .join('')
 }
 
-function normalizeEmployeeOptions(res: any): SelectOption[] {
+function resolveOptionCollection(res: any) {
   const raw = (res?.content ?? res?.data ?? res?.options ?? res ?? []) as any[]
-  if (!Array.isArray(raw)) return [defaultEmployeeOption()]
+  return Array.isArray(raw) ? raw : []
+}
+
+function normalizeEmployeeOptions(raw: any[]): SelectOption[] {
   const mapped = raw
     .map((item: any) => {
       const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
@@ -109,6 +117,27 @@ function normalizeEmployeeOptions(res: any): SelectOption[] {
     .filter((item: SelectOption | null): item is SelectOption => Boolean(item))
 
   return [defaultEmployeeOption(), ...mapped]
+}
+
+function resolveCurrentEmployeeOption(raw: any[]): SelectOption | null {
+  const currentCode = currentUserProfileCode.value
+  const currentName = auth.user?.fullName?.trim().toLowerCase() ?? ''
+  const currentEmail = auth.user?.email?.trim().toLowerCase() ?? ''
+
+  const match = raw.find((item: any) => {
+    const value = String(item?.code ?? item?.userProfileCode ?? item?.id ?? '').trim()
+    const name = String(item?.name ?? item?.fullName ?? '').trim().toLowerCase()
+    const email = String(item?.email ?? '').trim().toLowerCase()
+
+    return value === currentCode || (currentName.length > 0 && name === currentName) || (currentEmail.length > 0 && email === currentEmail)
+  })
+
+  if (!match && !currentCode) return null
+
+  const value = String(match?.code ?? match?.userProfileCode ?? match?.id ?? currentCode).trim()
+  const name = String(match?.name ?? match?.fullName ?? match?.email ?? currentUserLabel.value).trim()
+  if (!value) return null
+  return { value, label: name ? `${value} - ${name}` : value }
 }
 
 function normalizeRow(item: EmployeeDailyWorkListResponse, index: number): LogWorkRow {
@@ -134,23 +163,60 @@ function normalizeRow(item: EmployeeDailyWorkListResponse, index: number): LogWo
 
 async function loadEmployeeOptions() {
   loadingEmployees.value = true
+
   try {
     const res = await userProfileService.options({ page: 0, size: 200, sortDir: 'ASC' })
-    employeeOptions.value = normalizeEmployeeOptions(res)
-    console.log('Loaded employee options:', employeeOptions.value)
-  } catch {
-    employeeOptions.value = [defaultEmployeeOption()]
+    const raw = resolveOptionCollection(res)
+
+    if (isEmployeeRole.value) {
+      const currentOption = resolveCurrentEmployeeOption(raw)
+      employeeOptions.value = currentOption ? [currentOption] : []
+      employeeCode.value = currentOption?.value ?? currentUserProfileCode.value
+      applied.value.employeeCode = employeeCode.value
+      return
+    }
+
+    employeeOptions.value = normalizeEmployeeOptions(raw)
+  } catch (e: any) {
+    if (isEmployeeRole.value) {
+      employeeOptions.value = currentUserProfileCode.value
+        ? [{ value: currentUserProfileCode.value, label: `${currentUserProfileCode.value} - ${currentUserLabel.value}` }]
+        : []
+      employeeCode.value = currentUserProfileCode.value
+      applied.value.employeeCode = employeeCode.value
+    } else {
+      employeeOptions.value = [defaultEmployeeOption()]
+    }
+
+    if (isEmployeeRole.value && !currentUserProfileCode.value) {
+      error.value = t('logWork.errors.currentEmployeeUnavailable')
+    } else if (!isEmployeeRole.value) {
+      error.value = e?.response?.data?.message ?? ''
+    }
   } finally {
     loadingEmployees.value = false
   }
 }
 
 async function loadRows() {
+  if (isEmployeeRole.value && !currentUserProfileCode.value) {
+    rows.value = []
+    totalElements.value = 0
+    totalPages.value = 1
+    error.value = t('logWork.errors.currentEmployeeUnavailable')
+    return
+  }
+
   loading.value = true
   error.value = ''
+
   try {
+    const scopedEmployeeCode = isEmployeeRole.value
+      ? currentUserProfileCode.value
+      : applied.value.employeeCode
+
     const res = await dailyWorkService.list({
-      employeeCode: applied.value.employeeCode || undefined,
+      employeeCode: scopedEmployeeCode || undefined,
       startDate: applied.value.workingDateFrom || undefined,
       endDate: applied.value.workingDateTo || undefined,
       usedPto: applied.value.usedPto ? true : undefined,
@@ -170,14 +236,8 @@ async function loadRows() {
       if (!res?.totalElements) totalElements.value = 0
     }
   } catch (e: any) {
-    rows.value = seedRows.filter((row) => {
-      if (applied.value.employeeCode && row.userProfileCode !== applied.value.employeeCode) return false
-      if (applied.value.workingDateFrom && row.logDay < applied.value.workingDateFrom) return false
-      if (applied.value.workingDateTo && row.logDay > applied.value.workingDateTo) return false
-      if (applied.value.usedPto && !row.usedPto) return false
-      return true
-    })
-    totalElements.value = rows.value.length
+    rows.value = []
+    totalElements.value = 0
     totalPages.value = 1
     currentPage.value = 1
     error.value = e?.response?.data?.message ?? t('logWorkList.loadFailed')
@@ -193,9 +253,9 @@ onMounted(async () => {
 
 function formatDate(value: string) {
   if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(date)
+  const parsedDate = new Date(value)
+  if (Number.isNaN(parsedDate.getTime())) return value
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(parsedDate)
 }
 
 function formatTime(value: string) {
@@ -204,9 +264,9 @@ function formatTime(value: string) {
   const hour = Number(hourRaw)
   const minute = Number(minuteRaw)
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value
-  const date = new Date()
-  date.setHours(hour, minute, 0, 0)
-  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(date)
+  const parsedTime = new Date()
+  parsedTime.setHours(hour, minute, 0, 0)
+  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(parsedTime)
 }
 
 function formatOtHours(value: number) {
@@ -214,9 +274,13 @@ function formatOtHours(value: number) {
   return `${value.toFixed(1)} hrs`
 }
 
+function toggleFilters() {
+  isFilterOpen.value = !isFilterOpen.value
+}
+
 async function applyFilters() {
   applied.value = {
-    employeeCode: employeeCode.value,
+    employeeCode: isEmployeeRole.value ? currentUserProfileCode.value : employeeCode.value,
     workingDateFrom: workingDateFrom.value,
     workingDateTo: workingDateTo.value,
     usedPto: usedPto.value,
@@ -226,7 +290,7 @@ async function applyFilters() {
 }
 
 async function resetFilters() {
-  employeeCode.value = ''
+  employeeCode.value = isEmployeeRole.value ? currentUserProfileCode.value : ''
   workingDateFrom.value = ''
   workingDateTo.value = ''
   usedPto.value = false
@@ -300,20 +364,22 @@ function exportCsv() {
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
-          <UiButton variant="outline" leadingIcon="filter_alt" @click="applyFilters">{{ t('logWorkList.actions.moreFilters') }}</UiButton>
+          <UiButton variant="outline" leadingIcon="filter_alt" @click="toggleFilters">
+            {{ isFilterOpen ? t('logWorkList.actions.hideFilters') : t('logWorkList.actions.showFilters') }}
+          </UiButton>
           <UiButton variant="outline" leadingIcon="add" @click="router.push(AppRoute.LOG_WORK)">{{ t('logWorkList.actions.addLog') }}</UiButton>
           <UiButton variant="primary" leadingIcon="download" @click="exportCsv">{{ t('logWorkList.actions.exportLogs') }}</UiButton>
         </div>
       </div>
 
-      <UiCard class="overflow-visible relative z-10">
-        <UiCardBody class="ui-card overflow-visible">
+      <UiCard v-if="isFilterOpen" class="overflow-visible relative z-10">
+        <UiCardBody class="overflow-visible">
           <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] gap-4 items-end">
             <UiSelect
               v-model="employeeCode"
               :label="t('common.field.employeeCode')"
               :options="employeeOptions"
-              :disabled="loadingEmployees"
+              :disabled="loadingEmployees || isEmployeeRole"
             />
 
             <div>
@@ -390,8 +456,8 @@ function exportCsv() {
               </div>
             </template>
 
-            <template #cell-workingDate="{ row }">
-              <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ formatDate(row.workingDate) }}</span>
+            <template #cell-logDay="{ row }">
+              <span class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ formatDate(row.logDay) }}</span>
             </template>
 
             <template #cell-timeRange="{ row }">

@@ -250,6 +250,8 @@ onMounted(loadRows)
                 <UiIcon name="delete" />
               </button>
             </div>
+<<<<<<< Updated upstream
+=======
           </template>
         </UiTable>
 
@@ -264,9 +266,9 @@ onMounted(loadRows)
       </div>
     </div>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="closeModal">
-      <div class="w-full max-w-xl ui-card">
-        <div class="p-4 md:p-6 space-y-5">
+    <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4" @click.self="closeModal">
+      <div class="w-full max-w-xl ui-card !overflow-visible">
+        <div class="p-4 md:p-6 space-y-5 overflow-visible">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-bold">{{ modalTitle }}</h2>
             <button type="button" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" @click="closeModal">
@@ -283,6 +285,7 @@ onMounted(loadRows)
           <div class="flex justify-end gap-3">
             <UiButton variant="outline" @click="closeModal">{{ t('common.action.cancel') }}</UiButton>
             <UiButton variant="primary" :disabled="loading" @click="saveComponent">{{ editingId === null ? t('common.action.create') : t('common.action.update') }}</UiButton>
+>>>>>>> Stashed changes
           </div>
         </div>
       </div>

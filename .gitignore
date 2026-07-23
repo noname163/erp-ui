@@ -8,6 +8,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 .tmp/
+playwright-report/
+test-results/
+e2e-report/
+e2e/test-accounts.local.json
 
 # Local env files (commit only `.env.example`)
 .env*
