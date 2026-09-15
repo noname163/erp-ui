@@ -227,19 +227,28 @@ function setPage(nextPage: number) {
   page.value = nextPage
 }
 
-function viewPayrollResultDetails(row: PayrollResultRow) {
-  const employeeCode = row.employeeCode !== '-' ? row.employeeCode.trim() : ''
-  const period = row.period !== '-' ? row.period.trim() : ''
+const detailRow = ref<PayrollResultRow | null>(null)
+const detailItems = ref<Record<string, unknown>[]>([])
+const detailLoading = ref(false)
+const detailError = ref('')
 
-  if (!employeeCode && !period) return
-
-  void router.push({
-    path: AppRoute.SALARY_SLIP,
-    query: {
-      ...(employeeCode ? { employeeCode } : {}),
-      ...(period ? { period } : {}),
-    },
-  })
+async function viewPayrollResultDetails(row: PayrollResultRow) {
+  detailRow.value = row
+  detailItems.value = []
+  detailError.value = ''
+  if (row.id.startsWith('PAYROLL-RESULT-')) {
+    detailError.value = 'The server did not return a payroll result code. Restart the backend with the latest build.'
+    return
+  }
+  detailLoading.value = true
+  try {
+    const data = await payrollResultService.details(row.id)
+    detailItems.value = Array.isArray(data) ? data : []
+  } catch (error: any) {
+    detailError.value = error?.response?.data?.message || 'Unable to load payroll calculation details.'
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 function sourceVariant(value: PayrollResultSourceType) {
@@ -805,6 +814,27 @@ function toTimestamp(value: string) {
           </UiCardBody>
         </UiCard>
       </div>
+    </div>
+    <div v-if="detailRow" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" role="dialog" aria-modal="true" aria-label="Payroll calculation details">
+      <section class="max-h-[85vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-6 text-slate-900">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold">Payroll calculation details</h2>
+          <UiButton variant="outline" @click="detailRow = null">Close</UiButton>
+        </div>
+        <p>{{ detailRow.employeeName }} · {{ detailRow.period }}</p>
+        <p>Expected: {{ formatAmount(detailRow.expectedAmount, detailRow.currency) }} · Actual: {{ formatAmount(detailRow.actualAmount, detailRow.currency) }}</p>
+        <p>Quantity: {{ detailRow.actualQty }} / {{ detailRow.expectedQty }} {{ detailRow.unit }}</p>
+        <p v-if="detailLoading" role="status">Loading calculation details…</p>
+        <p v-else-if="detailError" role="alert">{{ detailError }}</p>
+        <p v-else-if="!detailItems.length">No saved calculation details are available for this result.</p>
+        <table v-else class="mt-4 w-full text-left">
+          <thead><tr><th>Basis</th><th>Hours</th><th>Amount</th><th>Formula</th></tr></thead>
+          <tbody><tr v-for="(item, index) in detailItems" :key="String(item.code ?? index)">
+            <td>{{ item.calcBasis }}</td><td>{{ item.basisHours ?? '—' }}</td>
+            <td>{{ item.amount ?? '—' }}</td><td>{{ item.formulaNote ?? '—' }}</td>
+          </tr></tbody>
+        </table>
+      </section>
     </div>
   </AppLayout>
 </template>
