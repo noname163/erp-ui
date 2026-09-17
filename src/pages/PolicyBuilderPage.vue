@@ -24,6 +24,10 @@ type PolicyForm = {
     roundingRule: string
     effectiveFrom: string
     effectiveTo: string
+    weekdayOt: number
+    restOt: number
+    holidayOt: number
+    nightPremium: number
 }
 
 type ConflictState = {
@@ -33,6 +37,29 @@ type ConflictState = {
     icon: string
 }
 
+const statutoryOverrides = ref<Record<string, string>>({})
+const overrideReason = ref('')
+const customTaxBands = ref(false)
+const taxBands = ref<{upper: string; rate: string}[]>([{upper:'10000000',rate:'5'},{upper:'30000000',rate:'10'},{upper:'60000000',rate:'20'},{upper:'100000000',rate:'30'},{upper:'',rate:'35'}])
+const overrideFields = [
+  {key:'personalTaxRelief',label:'Personal monthly tax relief (VND)'},
+  {key:'dependentTaxRelief',label:'Monthly relief per dependent (VND)'},
+  {key:'insuranceReferenceWage',label:'Insurance reference wage (VND; cap = 20 * wage)'},
+  {key:'regionalMinimumWage',label:'Regional minimum wage (VND; unemployment cap = 20 * wage)'},
+  {key:'employeeSocialRate',label:'Employee social insurance rate (0.08 = 8%)'},
+  {key:'employeeHealthRate',label:'Employee health insurance rate (0.015 = 1.5%)'},
+  {key:'employeeUnemploymentRate',label:'Employee unemployment rate (0.01 = 1%)'},
+  {key:'employerSocialRate',label:'Employer social / occupational rate (0.175 = 17.5%)'},
+  {key:'employerHealthRate',label:'Employer health insurance rate (0.03 = 3%)'},
+  {key:'employerUnemploymentRate',label:'Employer unemployment rate (0.01 = 1%)'},
+]
+function buildStatutoryOverrides() {
+  const values: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(statutoryOverrides.value)) if (value !== '' && value != null) values[key] = Number(value)
+  if (customTaxBands.value) values.taxBands = taxBands.value.map(b => ({upper: b.upper === '' ? null : Number(b.upper), rate: Number(b.rate) / 100}))
+  if (Object.keys(values).length) values.overrideReason = overrideReason.value
+  return values
+}
 const LS_DRAFT = 'erp.payroll-policy.draft'
 
 const router = useRouter()
@@ -54,6 +81,7 @@ const form = ref<PolicyForm>({
     roundingRule: '',
     effectiveFrom: '',
     effectiveTo: '',
+    weekdayOt: 1.5, restOt: 2, holidayOt: 3, nightPremium: 0.3,
 })
 
 const fallbackUnitOptions = [
@@ -89,8 +117,7 @@ const guidanceCards = computed(() => [
 const canSubmit = computed(
     () =>
         form.value.name.trim().length > 0 &&
-        form.value.effectiveFrom.trim().length > 0 &&
-        form.value.effectiveTo.trim().length > 0 
+        form.value.effectiveFrom.trim().length > 0
 )
 
 const intervalLabel = computed(() =>
@@ -188,7 +215,8 @@ function buildPayload(): PayrollPolicyRequest | null {
         standardEndTime: form.value.endTime || undefined,
         roundingRule: form.value.roundingRule.trim() || undefined,
         effectiveFrom: form.value.effectiveFrom,
-        effectiveTo: form.value.effectiveTo,
+        effectiveTo: form.value.effectiveTo || undefined,
+        statutorySettings: { ...buildStatutoryOverrides(), jurisdiction: 'VN', weekdayOvertimeMultiplier: Number(form.value.weekdayOt), restDayOvertimeMultiplier: Number(form.value.restOt), holidayOvertimeMultiplier: Number(form.value.holidayOt), nightWorkPremium: Number(form.value.nightPremium) },
     }
 }
 
@@ -347,6 +375,27 @@ onMounted(() => {
                     </UiCardBody>
                 </UiCard>
 
+                <UiCard class="xl:col-span-12"><UiCardBody class="space-y-4">
+                    <h2 class="font-bold">Vietnam statutory payroll</h2>
+                    <p class="text-sm text-slate-600">Tax and insurance defaults follow the payroll period. These company overtime rates may exceed statutory minimums. Assign this policy to the employees working under Vietnam rules.</p>
+                    <div class="grid gap-4 md:grid-cols-4">
+                      <UiInput v-model="form.weekdayOt" label="Weekday OT multiplier" type="number" :min="1.5" :step="0.1" />
+                      <UiInput v-model="form.restOt" label="Rest-day OT multiplier" type="number" :min="2" :step="0.1" />
+                      <UiInput v-model="form.holidayOt" label="Holiday OT multiplier" type="number" :min="3" :step="0.1" />
+                      <UiInput v-model="form.nightPremium" label="Night premium (0.3 = 30%)" type="number" :min="0.3" :step="0.05" />
+                    </div>
+                    <details class="rounded-lg border p-4"><summary class="cursor-pointer font-semibold">Tax and insurance policy overrides</summary>
+                      <p class="my-3 text-sm text-slate-600">Leave fields empty to use the statutory defaults for each payroll period. Create a dated policy version for an approved change.</p>
+                      <div class="grid gap-4 md:grid-cols-2"><UiInput v-for="field in overrideFields" :key="field.key" v-model="statutoryOverrides[field.key]" :label="field.label" type="number" :min="0" step="any" /></div>
+                      <label class="mt-4 block text-sm"><input v-model="customTaxBands" type="checkbox" /> Override monthly progressive tax bands</label>
+                      <div v-if="customTaxBands" class="mt-3 space-y-2">
+                        <div v-for="(band,index) in taxBands" :key="index" class="grid grid-cols-2 gap-3"><UiInput v-model="band.upper" :label="`Band ${index+1}: upper limit in VND (last empty = unlimited)`" type="number" :min="0" /><UiInput v-model="band.rate" label="Rate (%)" type="number" :min="0" :max="100" step="any" /></div>
+                        <UiButton type="button" variant="outline" @click="taxBands.splice(taxBands.length-1,0,{upper:'',rate:''})">Add tax band</UiButton>
+                        <UiButton v-if="taxBands.length > 1" type="button" variant="outline" @click="taxBands.splice(taxBands.length-2,1)">Remove preceding band</UiButton>
+                      </div>
+                      <UiInput v-model="overrideReason" label="Legal / company policy basis for overrides" class="mt-4" />
+                    </details>
+                </UiCardBody></UiCard>
                 <div class="grid grid-cols-1 gap-6 xl:col-span-12 xl:grid-cols-12">
                     <UiCard class="xl:col-span-6">
                         <UiCardBody class="space-y-6">
@@ -370,7 +419,7 @@ onMounted(() => {
                                 <div class="space-y-2">
                                     <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
                                         {{ t('common.field.effectiveTo') }}</p>
-                                    <UiInput v-model="form.effectiveTo" type="date" />
+                                    <UiInput v-model="form.effectiveTo" type="date" hint="Leave empty to keep this policy active until replaced." />
                                 </div>
                             </div>
                         </UiCardBody>

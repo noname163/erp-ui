@@ -131,7 +131,7 @@ function buildUpdatedLabel(item: PayrollPolicyResponse, lifecycle: PolicyLifecyc
         return t('policies.list.labels.ended', { date: toDateLabel(item.effectiveTo) })
     }
 
-    if (item.effectiveTo) {
+    if (item.effectiveTo && !item.effectiveTo.startsWith('9999')) {
         return t('policies.list.labels.ends', { date: toDateLabel(item.effectiveTo) })
     }
 
@@ -321,7 +321,7 @@ async function handleAssignmentConfirm(employeeCodes: string[]) {
         return
     }
 
-    if (!selectedPolicy.value.effectiveFrom || !selectedPolicy.value.effectiveTo) {
+    if (!selectedPolicy.value.effectiveFrom) {
         error.value = t('policies.list.assignment.datesRequired')
         return
     }
@@ -334,7 +334,7 @@ async function handleAssignmentConfirm(employeeCodes: string[]) {
             policyCode: selectedPolicy.value.code,
             employeeCodes,
             effectiveFrom: selectedPolicy.value.effectiveFrom,
-            effectiveTo: selectedPolicy.value.effectiveTo,
+            effectiveTo: selectedPolicy.value.effectiveTo || undefined,
         })
 
         assignmentCounts.value = {
@@ -514,7 +514,7 @@ function lifecycleLabel(tab: string) {
                         <template #cell-effectiveRange="{ row }">
                             <div class="space-y-0.5 text-sm">
                                 <p class="font-semibold text-slate-900">{{ toDateLabel(row.effectiveFrom) }}</p>
-                                <p class="text-slate-500">{{ toDateLabel(row.effectiveTo) }}</p>
+                                <p class="text-slate-500">{{ row.effectiveTo?.startsWith('9999') ? 'Until replaced' : toDateLabel(row.effectiveTo) }}</p>
                             </div>
                         </template>
 

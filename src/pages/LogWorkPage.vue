@@ -43,6 +43,8 @@ const createDefaultForm = () => ({
   workType: 'NORMAL' as WorkType,
   usedPto: false,
   otTime: 0,
+  nightHours: 0,
+  nightOvertimeHours: 0,
   description: '',
 })
 
@@ -173,7 +175,9 @@ async function submit() {
       ...form.value,
       userProfileCode: isEmployeeRole.value ? currentUserProfileCode.value : form.value.userProfileCode,
       quantity: Number(form.value.quantity),
-      otTime: Number(form.value.otTime),
+      otTime: Math.round(Number(form.value.otTime) * 60),
+      nightHours: Number(form.value.nightHours),
+      nightOvertimeHours: Number(form.value.nightOvertimeHours),
       description: undefined,
     }]
     const res = await dailyWorkService.createMany(payload)
@@ -264,6 +268,8 @@ onMounted(() => {
 
               <div class="mt-6">
                 <UiInput v-model="form.otTime" :label="t('common.field.otTime')" type="number" :step="0.5" :hint="t('logWork.fields.optionalHint')" />
+                <UiInput v-model="form.nightHours" label="Regular night hours (22:00-06:00)" type="number" :min="0" :step="0.25" hint="Subset of regular hours; exclude night overtime." />
+                <UiInput v-model="form.nightOvertimeHours" label="Night overtime hours" type="number" :min="0" :step="0.25" hint="Subset of total OT hours above." />
               </div>
             </section>
 
