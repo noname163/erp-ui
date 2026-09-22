@@ -70,6 +70,10 @@ export type PayrollResultListQuery = {
 };
 
 export const payrollResultService = {
+  async details(code: string) {
+    const { data } = await http.get(`/api/payroll-results/${encodeURIComponent(code)}/details`);
+    return data;
+  },
   async list(query: PayrollResultListQuery = {}) {
     const { data } = await http.get<PayrollResultListResponse[] | any>("/api/payroll-results", { params: query });
     return data;

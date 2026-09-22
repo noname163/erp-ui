@@ -13,6 +13,8 @@ export type EmployeeDailyWorkRequest = {
   workType: WorkType
   usedPto?: boolean
   otTime?: number
+  nightHours?: number
+  nightOvertimeHours?: number
 }
 
 export type EmployeeDailyWorkListQuery = {

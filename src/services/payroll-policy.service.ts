@@ -6,9 +6,10 @@ export type PayrollPolicyRequest = {
   unitCode?: string;
   standardStartTime?: string;
   standardEndTime?: string;
+  statutorySettings?: { jurisdiction: string; weekdayOvertimeMultiplier?: number; restDayOvertimeMultiplier?: number; holidayOvertimeMultiplier?: number; nightWorkPremium?: number; [key: string]: unknown };
   roundingRule?: string;
   effectiveFrom: string;
-  effectiveTo: string;
+  effectiveTo?: string;
 };
 export type PayrollPolicyResponse = {
   code: string;
@@ -31,7 +32,7 @@ export type ApplyPayrollPolicyEmployeesRequest = {
   policyCode: string;
   employeeCodes: string[];
   effectiveFrom: string;
-  effectiveTo: string;
+  effectiveTo?: string;
 };
 export type SelectionOptionQuery = {
   type?: string;

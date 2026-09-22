@@ -271,7 +271,7 @@ function formatTime(value: string) {
 
 function formatOtHours(value: number) {
   if (!value) return '-'
-  return `${value.toFixed(1)} hrs`
+  return `${(value / 60).toFixed(2)} hrs`
 }
 
 function toggleFilters() {

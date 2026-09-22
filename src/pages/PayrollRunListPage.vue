@@ -240,16 +240,10 @@ function setPage(next: number) {
 
 function viewPayrollRunDetails(row: PayrollRunRow) {
   const payrollRunCode = row.code.trim() || row.id.trim()
-  const createdDate = toDateOnlyValue(row.runAt)
 
   void router.push({
     path: AppRoute.PAYROLL_RESULTS,
-    query: payrollRunCode || createdDate
-      ? {
-          ...(payrollRunCode ? { payrollRunCode } : {}),
-          ...(createdDate ? { createdDate } : {}),
-        }
-      : undefined,
+    query: payrollRunCode ? { payrollRunCode } : undefined,
   })
 }
 

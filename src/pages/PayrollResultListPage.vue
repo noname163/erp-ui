@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import MonthlyPayslip from '@/components/payroll/MonthlyPayslip.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiCard from '@/components/ui/UiCard.vue'
@@ -227,19 +228,9 @@ function setPage(nextPage: number) {
   page.value = nextPage
 }
 
+const detailRow = ref<PayrollResultRow | null>(null)
 function viewPayrollResultDetails(row: PayrollResultRow) {
-  const employeeCode = row.employeeCode !== '-' ? row.employeeCode.trim() : ''
-  const period = row.period !== '-' ? row.period.trim() : ''
-
-  if (!employeeCode && !period) return
-
-  void router.push({
-    path: AppRoute.SALARY_SLIP,
-    query: {
-      ...(employeeCode ? { employeeCode } : {}),
-      ...(period ? { period } : {}),
-    },
-  })
+  detailRow.value = row
 }
 
 function sourceVariant(value: PayrollResultSourceType) {
@@ -805,6 +796,15 @@ function toTimestamp(value: string) {
           </UiCardBody>
         </UiCard>
       </div>
+    </div>
+    <div v-if="detailRow" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" role="dialog" aria-modal="true" aria-label="Monthly payslip">
+      <section class="max-h-[85vh] w-full max-w-6xl overflow-auto rounded-xl bg-white p-6 text-slate-900">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold">Monthly payslip</h2>
+          <UiButton variant="outline" @click="detailRow = null">Close</UiButton>
+        </div>
+        <MonthlyPayslip :key="detailRow.id" :result-code="detailRow.id" :employee-name="detailRow.employeeName" :initial-period="detailRow.period" :initial-currency="detailRow.currency" :initial-salary="detailRow.expectedAmount" />
+      </section>
     </div>
   </AppLayout>
 </template>
