@@ -11,16 +11,24 @@ import UiTable, { type UiTableHeader } from '@/components/ui/UiTable.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiIcon from '@/components/ui/UiIcon.vue'
 import { AppRoute } from '@/types'
-import { employeeService } from '@/services/employee.service'
+import { employeeService, type UpdateEmployeeRequest } from '@/services/employee.service'
+import { departmentService } from '@/services/department.service'
+import { roleService } from '@/services/role.service'
 import { useI18n } from '@/i18n'
 
 type EmployeeStatus = 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE'
 
 type EmployeeRow = {
   id: string
+  profileCode: string
   code: string
   name: string
+  firstName: string
+  lastName: string
   email: string
+  phone: string
+  departmentCode: string
+  roleCode: string
   age: number | null
   department: string
   skills: string[]
@@ -39,6 +47,15 @@ const currentPage = ref(1)
 const pageSize = 10
 const isFilterOpen = ref(false)
 const rows = ref<EmployeeRow[]>([])
+const editingEmployee = ref<EmployeeRow | null>(null)
+const deletingEmployee = ref<EmployeeRow | null>(null)
+const actionLoading = ref(false)
+const actionError = ref('')
+const departmentEditOptions = ref<{ value: string; label: string }[]>([])
+const roleEditOptions = ref<{ value: string; label: string }[]>([])
+const editForm = ref<UpdateEmployeeRequest>({
+  firstName: '', lastName: '', email: '', phone: '', departmentCode: '', roleCode: '',
+})
 
 const filters = ref({
   name: '',
@@ -152,9 +169,15 @@ function normalizeRow(payload: Record<string, unknown>, index: number): Employee
 
   return {
     id: getString(payload, ['id', 'employeeId', 'userCode'], String(index + 1)),
+    profileCode: getString(payload, ['profileCode', 'userCode']),
     code: getString(payload, ['code', 'employeeCode'], `EMP-${String(index + 1).padStart(5, '0')}`),
     name: resolvedName || `Employee ${index + 1}`,
+    firstName,
+    lastName,
     email: getString(payload, ['email'], 'n/a'),
+    phone: getString(payload, ['phone', 'phoneNumber']),
+    departmentCode: getString(payload, ['departmentCode']),
+    roleCode: getString(payload, ['roleCode']),
     age: getNumber(payload, ['age']),
     department: getString(payload, ['departmentName', 'department'], t('common.state.notAvailable')),
     skills: getSkills(payload),
@@ -309,6 +332,81 @@ function applyFilters() {
 function setPage(page: number) {
   if (page < 1 || page > totalPages.value) return
   currentPage.value = page
+}
+
+async function loadEditOptions() {
+  if (departmentEditOptions.value.length && roleEditOptions.value.length) return
+  const [departments, roles] = await Promise.all([departmentService.options(), roleService.options()])
+  departmentEditOptions.value = (departments ?? []).map((item) => ({ value: item.code, label: item.name }))
+  roleEditOptions.value = (roles ?? []).map((item) => ({ value: item.code, label: item.name }))
+}
+
+async function openEdit(row: EmployeeRow) {
+  actionError.value = ''
+  editingEmployee.value = row
+  editForm.value = {
+    firstName: row.firstName,
+    lastName: row.lastName,
+    email: row.email === 'n/a' ? '' : row.email,
+    phone: row.phone,
+    departmentCode: row.departmentCode,
+    roleCode: row.roleCode,
+  }
+  try {
+    await loadEditOptions()
+  } catch (e: any) {
+    actionError.value = e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Unable to load edit options.'
+  }
+}
+
+function validateEdit() {
+  const form = editForm.value
+  if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim() || !form.phone.trim()
+    || !form.departmentCode || !form.roleCode) {
+    actionError.value = 'Please complete all required fields.'
+    return false
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    actionError.value = 'Please enter a valid email address.'
+    return false
+  }
+  return true
+}
+
+async function saveEdit() {
+  if (!editingEmployee.value || !validateEdit()) return
+  actionLoading.value = true
+  actionError.value = ''
+  try {
+    await employeeService.update(editingEmployee.value.profileCode, {
+      ...editForm.value,
+      firstName: editForm.value.firstName.trim(),
+      lastName: editForm.value.lastName.trim(),
+      email: editForm.value.email.trim(),
+      phone: editForm.value.phone.trim(),
+    })
+    editingEmployee.value = null
+    await loadEmployees()
+  } catch (e: any) {
+    actionError.value = e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Unable to update employee.'
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function confirmDelete() {
+  if (!deletingEmployee.value) return
+  actionLoading.value = true
+  actionError.value = ''
+  try {
+    await employeeService.remove(deletingEmployee.value.profileCode)
+    deletingEmployee.value = null
+    await loadEmployees()
+  } catch (e: any) {
+    actionError.value = e?.response?.data?.detail ?? e?.response?.data?.message ?? 'Unable to delete employee.'
+  } finally {
+    actionLoading.value = false
+  }
 }
 </script>
 
@@ -474,12 +572,12 @@ function setPage(page: number) {
               <span class="text-sm text-slate-500">{{ row.createdBy }}</span>
             </template>
 
-            <template #cell-actions>
+            <template #cell-actions="{ row }">
               <div class="flex justify-end gap-2">
-                <button type="button" class="p-1 hover:text-primary transition-colors" title="Edit">
+                <button type="button" class="p-1 hover:text-primary transition-colors" title="Edit" @click="openEdit(row)">
                   <UiIcon name="edit" size="18px" />
                 </button>
-                <button type="button" class="p-1 hover:text-red-500 transition-colors" title="Delete">
+                <button type="button" class="p-1 hover:text-red-500 transition-colors" title="Delete" @click="actionError = ''; deletingEmployee = row">
                   <UiIcon name="delete" size="18px" />
                 </button>
               </div>
@@ -521,6 +619,56 @@ function setPage(page: number) {
             <UiButton variant="outline" icon-only :disabled="currentPage >= totalPages" @click="setPage(currentPage + 1)">
               <UiIcon name="chevron_right" size="20px" />
             </UiButton>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="editingEmployee" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Edit employee">
+        <div class="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900">
+          <div class="mb-5 flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold">Edit employee</h2>
+              <p class="mt-1 text-sm text-slate-500">{{ editingEmployee.name }}</p>
+            </div>
+            <button type="button" class="p-1 text-slate-500 hover:text-slate-900" :disabled="actionLoading" @click="editingEmployee = null">
+              <UiIcon name="close" size="22px" />
+            </button>
+          </div>
+          <form class="space-y-4" @submit.prevent="saveEdit">
+            <div v-if="actionError" class="rounded-lg bg-red-50 p-3 text-sm text-red-600">{{ actionError }}</div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <UiInput v-model="editForm.firstName" label="First name" required />
+              <UiInput v-model="editForm.lastName" label="Last name" required />
+              <UiInput v-model="editForm.email" label="Email" type="email" required />
+              <UiInput v-model="editForm.phone" label="Phone number" required />
+              <UiSelect v-model="editForm.departmentCode" label="Department" required :options="departmentEditOptions" />
+              <UiSelect v-model="editForm.roleCode" label="Role" required :options="roleEditOptions" />
+            </div>
+            <div class="flex justify-end gap-3 pt-3">
+              <UiButton variant="outline" :disabled="actionLoading" @click="editingEmployee = null">Cancel</UiButton>
+              <UiButton type="submit" :disabled="actionLoading || !editingEmployee.profileCode">
+                {{ actionLoading ? 'Saving...' : 'Save changes' }}
+              </UiButton>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div v-if="deletingEmployee" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Delete employee">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900">
+          <div class="mb-4 flex size-11 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <UiIcon name="delete" size="22px" />
+          </div>
+          <h2 class="text-xl font-bold">Delete employee?</h2>
+          <p class="mt-2 text-sm text-slate-500">
+            {{ deletingEmployee.name }} will be deactivated and removed from the employee directory.
+          </p>
+          <div v-if="actionError" class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{{ actionError }}</div>
+          <div class="mt-6 flex justify-end gap-3">
+            <UiButton variant="outline" :disabled="actionLoading" @click="deletingEmployee = null">Cancel</UiButton>
+            <button type="button" class="ui-btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-60" :disabled="actionLoading || !deletingEmployee.profileCode" @click="confirmDelete">
+              {{ actionLoading ? 'Deleting...' : 'Delete employee' }}
+            </button>
           </div>
         </div>
       </div>
